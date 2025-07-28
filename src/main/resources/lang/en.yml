@@ -1,0 +1,139 @@
+# English Language File for DoubleLife Plugin
+
+# General Messages
+messages:
+  reload-success: "Configuration reloaded successfully!"
+  no-permission: "You don't have permission to use this command."
+  player-only: "This command can only be used by players."
+  unknown-command: "Unknown command. Use /doublelife help for available commands."
+
+# Session Messages
+session:
+  start-success: "Double Life session started! You now have temporary admin permissions."
+  start-failed: "Failed to start Double Life session."
+  end-success: "Double Life session ended! Your permissions have been restored."
+  end-failed: "You don't have an active session to end."
+  already-active: "You already have an active Double Life session."
+  no-active-session: "You don't have an active Double Life session."
+  max-duration-reached: "Your Double Life session has reached the maximum duration and has been ended."
+  on-cooldown: "You must wait {0} seconds before starting another session."
+  cannot-start: "You cannot start a Double Life session right now."
+  
+# Permission Messages  
+permissions:
+  applied: "Admin permissions have been applied."
+  removed: "Admin permissions have been removed."
+  failed-to-apply: "Failed to apply admin permissions."
+  failed-to-remove: "Failed to remove admin permissions."
+
+# Status Messages
+status:
+  active-session: "Active Session"
+  session-duration: "Duration: {0}"
+  remaining-time: "Time Remaining: {0}"
+  cooldown-remaining: "Cooldown: {0}"
+  no-session: "No active session"
+  luckperms-not-found: "LuckPerms not found! Plugin disabled."
+
+# GUI Messages
+gui:
+  title: "⚡ Double Life Menu"
+  start-button: "Start Admin Mode"
+  start-button-lore:
+    - "Click to begin your temporary"
+    - "admin session with full permissions"
+    - ""
+    - "Duration: {0} minutes"
+    - "Cooldown: {1} minutes"
+  end-button: "End Admin Mode"
+  end-button-lore:
+    - "Click to end your current"
+    - "admin session and restore"
+    - "your normal permissions"
+  status-button: "Session Status"
+  status-button-lore:
+    - "View information about your"
+    - "current Double Life session"
+  
+  session-info:
+    - "Session Duration: {0}"
+    - "Time Remaining: {1}"
+    - "Permissions Active: {2}"
+  
+  cooldown-info:
+    - "Last session ended {0} ago"
+    - "Next session available in {1}"
+  
+  no-session-info:
+    - "No active session"
+    - "Click 'Start Admin Mode' to begin"
+
+  info-description:
+    - "Double Life allows temporary"
+    - "admin access with full logging"
+    - ""
+    - "✓ All actions tracked"
+    - "✓ State auto-restored"
+    - "✓ Time limited access"
+    
+  info-title: "Information"
+  cooldown-title: "On Cooldown"
+  cooldown-wait: "Please wait: {0}"
+  time-elapsed: "Time elapsed: {0} minutes"
+  time-remaining: "Time remaining: {0} minutes"
+  activities-logged: "Activities logged: {0}"
+  activity-log-title: "Activity Log"
+  recent-activities: "Recent activities:"
+  more-activities: "... and {0} more"
+
+# Boss Bar Messages
+bossbar:
+  active-title: "Double Life Active"
+  remaining-time: "Double Life - {0} minutes remaining"
+  ending-soon: "Double Life - Session ending soon!"
+
+# Activity Log Messages
+log:
+  session-started: "Session started for player: {0}"
+  session-ended: "Session ended for player: {0}"
+  command-executed: "Command executed: {0}"
+  gamemode-changed: "Gamemode changed from {0} to {1}"
+  item-given: "Item given: {0} x{1}"
+  block-placed: "Block placed: {0} at {1}"
+  block-broken: "Block broken: {0} at {1}"
+  container-accessed: "Container accessed: {0} at {1}"
+  item-dropped: "Item dropped: {0} x{1}"
+
+# Webhook Messages
+webhook:
+  session-started: "🟢 **{0}** started a Double Life session"
+  session-ended: "🔴 **{0}** ended their Double Life session (Duration: {1})"
+  session-timeout: "⏰ **{0}**'s Double Life session ended due to timeout"
+  
+# Command Help
+help:
+  header: "=== Double Life Commands ==="
+  start: "/doublelife start - Start a temporary admin session"
+  end: "/doublelife end - End your current admin session"  
+  status: "/doublelife status - View session information"
+  gui: "/doublelife - Open the Double Life menu"
+  reload: "/doublelife reload - Reload plugin configuration"
+  help: "/doublelife help - Show this help message"
+
+# Time Format
+time:
+  seconds: "{0}s"
+  minutes: "{0}m"
+  hours: "{0}h"
+  days: "{0}d"
+  hours-minutes: "{0}h {1}m"
+  minutes-seconds: "{0}m {1}s"
+  
+# Console Messages
+console:
+  plugin-enabled: "DoubleLife has been enabled successfully!"
+  plugin-disabled: "DoubleLife has been disabled."
+  config-loaded: "Configuration loaded successfully."
+  language-loaded: "Language '{0}' loaded successfully."
+  luckperms-hooked: "Successfully hooked into LuckPerms."
+  session-cleanup: "Cleaned up {0} active sessions on shutdown."

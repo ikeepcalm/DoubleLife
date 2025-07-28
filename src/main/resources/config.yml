@@ -1,0 +1,53 @@
+# Double Life Configuration
+# Time values can use 'm' for minutes or 'h' for hours
+
+# Language Settings
+language:
+  default: "en"
+
+# Maximum duration for a Double Life session
+max-duration: 10m
+
+# Cooldown between sessions
+cooldown: 5m
+
+# Permissions granted during Double Life mode
+# Use '-permission' to explicitly deny a permission
+temporary-permissions:
+  - "*"
+  - "-doublelife.use"
+  - "-doublelife.admin"
+
+# Commands executed when entering Double Life mode
+# Use {player} as a placeholder for the player's name
+entry-commands:
+  - "gamemode creative {player}"
+
+# GUI Settings
+gui:
+  enabled: true
+  title: "⚡ Double Life Menu"
+  start-button: "Start Admin Mode"
+  end-button: "End Admin Mode"
+
+# Activity Logging Settings
+logging:
+  commands: true
+  gamemode-changes: true
+  item-give: true
+  container-access: true
+  block-placements: true
+  item-drops: true
+
+# Webhook Settings
+webhook:
+  discord:
+    enabled: false
+    url: ""
+    format: "markdown" # Options: markdown, json
+  callback:
+    enabled: false
+    url: ""
+    method: "POST"
+    headers:
+      Authorization: "Bearer YOUR_TOKEN_HERE"

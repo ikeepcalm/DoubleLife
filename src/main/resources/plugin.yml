@@ -1,0 +1,23 @@
+name: DoubleLife
+version: 1.0.0
+main: dev.ua.ikeepcalm.doublelife.DoubleLife
+api-version: "1.21"
+authors: [ikeepcalm]
+description: Limited admin mode plugin with comprehensive activity logging
+
+depend:
+  - LuckPerms
+
+permissions:
+  doublelife.use:
+    description: Allows toggling Double Life mode
+    default: op
+  doublelife.bypass.limit:
+    description: Use Double Life without timer restriction
+    default: false
+  doublelife.status:
+    description: View Double Life session details
+    default: op
+  doublelife.admin:
+    description: Access to reload and administrative functions
+    default: op
