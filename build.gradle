@@ -10,6 +10,7 @@ version = '1.0.0'
 repositories {
     mavenCentral()
     maven { url "https://repo.panda-lang.org/releases" }
+    maven { url "https://repo.triumphteam.dev/snapshots/"}
     maven {
         name = "papermc-repo"
         url = "https://repo.papermc.io/repository/maven-public/"
@@ -24,7 +25,7 @@ dependencies {
     compileOnly 'net.luckperms:api:5.4'
     compileOnly("org.projectlombok:lombok:1.18.38")
     annotationProcessor("org.projectlombok:lombok:1.18.38")
-    implementation("dev.triumphteam:triumph-gui:3.1.11")
+    implementation("dev.triumphteam:triumph-gui-paper:3.1.13-SNAPSHOT")
     implementation "dev.rollczi:litecommands-bukkit:3.9.7"
     compileOnly("io.papermc.paper:paper-api:1.21.6-R0.1-SNAPSHOT")
 }
