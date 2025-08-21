@@ -18,10 +18,41 @@ temporary-permissions:
   - "-doublelife.use"
   - "-doublelife.admin"
 
-# Commands executed when entering Double Life mode
+# Commands executed when entering Double Life mode (Turbo mode only)
 # Use {player} as a placeholder for the player's name
 entry-commands:
   - "gamemode creative {player}"
+
+# Group Command Restrictions (for Default mode)
+# Commands listed here require DoubleLife mode to execute
+# Format: groupname: [list of commands]
+group-commands:
+  moderator:
+    - "tp"
+    - "tpa"
+    - "tphere"
+    - "co"
+    - "coreprotect"
+    - "gm"
+    - "gamemode"
+  administrator:
+    - "tp"
+    - "tpa" 
+    - "tphere"
+    - "co"
+    - "coreprotect"
+    - "gm"
+    - "gamemode"
+    - "give"
+    - "item"
+    - "enchant"
+    - "effect"
+    - "weather"
+    - "time"
+  helper:
+    - "tp"
+    - "tpa"
+    - "tphere"
 
 # GUI Settings
 gui:
@@ -45,6 +76,7 @@ webhook:
     enabled: false
     url: ""
     format: "markdown" # Options: markdown, json
+    turbo-mention: true # Whether to use @here for Turbo mode sessions
   callback:
     enabled: false
     url: ""

@@ -6,6 +6,7 @@ import dev.ua.ikeepcalm.doublelife.command.DoubleLifeCommand;
 import dev.ua.ikeepcalm.doublelife.config.PluginConfig;
 import dev.ua.ikeepcalm.doublelife.domain.service.SessionManager;
 import dev.ua.ikeepcalm.doublelife.listener.ActivityListener;
+import dev.ua.ikeepcalm.doublelife.listener.CommandInterceptor;
 import dev.ua.ikeepcalm.doublelife.config.LangConfig;
 import dev.ua.ikeepcalm.doublelife.util.WebhookUtil;
 import lombok.Getter;
@@ -50,6 +51,7 @@ public class DoubleLife extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        sessionManager.saveSessionsOnShutdown();
         sessionManager.endAllSessions();
 
         if (liteCommands != null) {
@@ -76,6 +78,7 @@ public class DoubleLife extends JavaPlugin {
 
     private void registerListeners() {
         getServer().getPluginManager().registerEvents(new ActivityListener(this), this);
+        getServer().getPluginManager().registerEvents(new CommandInterceptor(this), this);
     }
 
     public void reload() {

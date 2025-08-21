@@ -12,6 +12,9 @@ permissions:
   doublelife.use:
     description: Allows toggling Double Life mode
     default: op
+  doublelife.turbo:
+    description: Allows access to Turbo mode with full admin permissions
+    default: false
   doublelife.bypass.limit:
     description: Use Double Life without timer restriction
     default: false

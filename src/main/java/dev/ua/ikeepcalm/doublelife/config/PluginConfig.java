@@ -4,7 +4,10 @@ import dev.ua.ikeepcalm.doublelife.DoubleLife;
 import lombok.Getter;
 import org.bukkit.configuration.file.FileConfiguration;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.bukkit.configuration.ConfigurationSection;
 
 @Getter
 public class PluginConfig {
@@ -16,6 +19,7 @@ public class PluginConfig {
     private final long cooldownDuration;
     private final List<String> temporaryPermissions;
     private final List<String> entryCommands;
+    private final Map<String, List<String>> groupCommands;
     
     private final String language;
     
@@ -34,6 +38,7 @@ public class PluginConfig {
     private final boolean discordWebhookEnabled;
     private final String discordWebhookUrl;
     private final String discordWebhookFormat;
+    private final boolean discordTurboMention;
     
     private final boolean callbackEnabled;
     private final String callbackUrl;
@@ -47,6 +52,7 @@ public class PluginConfig {
         this.cooldownDuration = parseDuration(config.getString("cooldown", "5m"));
         this.temporaryPermissions = config.getStringList("temporary-permissions");
         this.entryCommands = config.getStringList("entry-commands");
+        this.groupCommands = loadGroupCommands();
         
         this.language = config.getString("language.default", "en");
         
@@ -65,6 +71,7 @@ public class PluginConfig {
         this.discordWebhookEnabled = config.getBoolean("webhook.discord.enabled", false);
         this.discordWebhookUrl = config.getString("webhook.discord.url", "");
         this.discordWebhookFormat = config.getString("webhook.discord.format", "markdown");
+        this.discordTurboMention = config.getBoolean("webhook.discord.turbo-mention", true);
         
         this.callbackEnabled = config.getBoolean("webhook.callback.enabled", false);
         this.callbackUrl = config.getString("webhook.callback.url", "");
@@ -82,5 +89,21 @@ public class PluginConfig {
         }
         
         return Long.parseLong(duration);
+    }
+    
+    private Map<String, List<String>> loadGroupCommands() {
+        Map<String, List<String>> result = new HashMap<>();
+        ConfigurationSection section = config.getConfigurationSection("group-commands");
+        
+        if (section == null) {
+            return result;
+        }
+        
+        for (String groupName : section.getKeys(false)) {
+            List<String> commands = section.getStringList(groupName);
+            result.put(groupName, commands);
+        }
+        
+        return result;
     }
 }

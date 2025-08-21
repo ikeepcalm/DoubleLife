@@ -3,6 +3,7 @@ package dev.ua.ikeepcalm.doublelife.config;
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.InputStream;
@@ -10,6 +11,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 
@@ -98,6 +100,14 @@ public class LangConfig {
         return getMessage(key, defaultLanguage, placeholders);
     }
     
+    public String getMessage(String key, Player player) {
+        return getMessage(key, getPlayerLanguage(player));
+    }
+    
+    public String getMessage(String key, Player player, Object... placeholders) {
+        return getMessage(key, getPlayerLanguage(player), placeholders);
+    }
+    
     public List<String> getMessageList(String key) {
         return getMessageList(key, defaultLanguage);
     }
@@ -117,6 +127,14 @@ public class LangConfig {
     
     public List<String> getMessageList(String key, Object... placeholders) {
         return getMessageList(key, defaultLanguage, placeholders);
+    }
+    
+    public List<String> getMessageList(String key, Player player) {
+        return getMessageList(key, getPlayerLanguage(player));
+    }
+    
+    public List<String> getMessageList(String key, Player player, Object... placeholders) {
+        return getMessageList(key, getPlayerLanguage(player), placeholders);
     }
     
     public List<String> getMessageList(String key, String language, Object... placeholders) {
@@ -139,6 +157,29 @@ public class LangConfig {
         } else {
             plugin.getLogger().warning("Attempted to set unknown language as default: " + language);
         }
+    }
+    
+    private String getPlayerLanguage(Player player) {
+        if (player == null) {
+            return defaultLanguage;
+        }
+        
+        Locale playerLocale = player.locale();
+        String playerLanguage = playerLocale.getLanguage();
+        
+        // Try exact language match first (e.g., "en", "uk")
+        if (languages.containsKey(playerLanguage)) {
+            return playerLanguage;
+        }
+        
+        // Try full locale string as fallback (e.g., "en_US", "uk_UA")
+        String fullLocale = playerLocale.toString().toLowerCase();
+        if (languages.containsKey(fullLocale)) {
+            return fullLocale;
+        }
+        
+        // Fallback to default language
+        return defaultLanguage;
     }
     
     public void reloadLanguages() {

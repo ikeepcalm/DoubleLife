@@ -6,6 +6,7 @@ import dev.rollczi.litecommands.annotations.execute.Execute;
 import dev.rollczi.litecommands.annotations.optional.OptionalArg;
 import dev.rollczi.litecommands.annotations.permission.Permission;
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
+import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeMode;
 import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeSession;
 import dev.ua.ikeepcalm.doublelife.gui.DoubleLifeGUI;
 import dev.ua.ikeepcalm.doublelife.util.ComponentUtil;
@@ -37,28 +38,51 @@ public class DoubleLifeCommand {
     @Permission("doublelife.use")
     public void start(@Context Player player) {
         if (plugin.getSessionManager().hasActiveSession(player)) {
-            player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.already-active")));
+            player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.already-active", player)));
             return;
         }
 
         if (!plugin.getSessionManager().canStartSession(player)) {
             long cooldown = plugin.getSessionManager().getRemainingCooldown(player);
             if (cooldown > 0) {
-                player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.on-cooldown", cooldown)));
+                player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.on-cooldown", player, cooldown)));
             } else {
-                player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.cannot-start")));
+                player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.cannot-start", player)));
             }
             return;
         }
 
-        plugin.getSessionManager().startSession(player);
+        plugin.getSessionManager().startSession(player, DoubleLifeMode.DEFAULT);
+    }
+
+    @Execute(name = "turbo")
+    @Permission("doublelife.turbo")
+    public void startTurbo(@Context Player player) {
+        if (plugin.getSessionManager().hasActiveSession(player)) {
+            player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.already-active", player)));
+            return;
+        }
+
+        if (!plugin.getSessionManager().canStartSession(player, DoubleLifeMode.TURBO)) {
+            long cooldown = plugin.getSessionManager().getRemainingCooldown(player);
+            if (cooldown > 0) {
+                player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.on-cooldown", player, cooldown)));
+            } else if (!plugin.getSessionManager().hasTurboPermission(player)) {
+                player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.turbo-permission-required", player)));
+            } else {
+                player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.cannot-start", player)));
+            }
+            return;
+        }
+
+        plugin.getSessionManager().startSession(player, DoubleLifeMode.TURBO);
     }
 
     @Execute(name = "end", aliases = {"stop"})
     @Permission("doublelife.use")
     public void end(@Context Player player) {
         if (!plugin.getSessionManager().hasActiveSession(player)) {
-            player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.no-active-session")));
+            player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.no-active-session", player)));
             return;
         }
 
@@ -79,7 +103,10 @@ public class DoubleLifeCommand {
         }
 
         if (!plugin.getSessionManager().hasActiveSession(checkPlayer)) {
-            sender.sendMessage(ComponentUtil.warning(plugin.getLangConfig().getMessage("status.no-session") + ": " + checkPlayer.getName()));
+            String message = (sender instanceof Player) ? 
+                plugin.getLangConfig().getMessage("status.no-session", (Player) sender) : 
+                plugin.getLangConfig().getMessage("status.no-session");
+            sender.sendMessage(ComponentUtil.warning(message + ": " + checkPlayer.getName()));
             return;
         }
 
@@ -89,8 +116,17 @@ public class DoubleLifeCommand {
 
         sender.sendMessage(ComponentUtil.gradient("=== Double Life Status ===", "#FFD700", "#FF6B35"));
         sender.sendMessage(ComponentUtil.info("Player: " + checkPlayer.getName()));
-        sender.sendMessage(ComponentUtil.info(plugin.getLangConfig().getMessage("status.session-duration", duration.toMinutes() + " minutes")));
-        sender.sendMessage(ComponentUtil.info(plugin.getLangConfig().getMessage("status.remaining-time", remainingMinutes + " minutes")));
+        sender.sendMessage(ComponentUtil.info("Mode: " + session.getMode().getDisplayName()));
+        
+        String durationMsg = (sender instanceof Player) ? 
+            plugin.getLangConfig().getMessage("status.session-duration", (Player) sender, duration.toMinutes() + " minutes") : 
+            plugin.getLangConfig().getMessage("status.session-duration", duration.toMinutes() + " minutes");
+        String remainingMsg = (sender instanceof Player) ? 
+            plugin.getLangConfig().getMessage("status.remaining-time", (Player) sender, remainingMinutes + " minutes") : 
+            plugin.getLangConfig().getMessage("status.remaining-time", remainingMinutes + " minutes");
+            
+        sender.sendMessage(ComponentUtil.info(durationMsg));
+        sender.sendMessage(ComponentUtil.info(remainingMsg));
         sender.sendMessage(ComponentUtil.info("Activities logged: " + session.getActivities().size()));
     }
 
@@ -98,7 +134,10 @@ public class DoubleLifeCommand {
     @Permission("doublelife.admin")
     public void reload(@Context CommandSender sender) {
         plugin.reload();
-        sender.sendMessage(ComponentUtil.success(plugin.getLangConfig().getMessage("messages.reload-success")));
+        String message = (sender instanceof Player) ? 
+            plugin.getLangConfig().getMessage("messages.reload-success", (Player) sender) : 
+            plugin.getLangConfig().getMessage("messages.reload-success");
+        sender.sendMessage(ComponentUtil.success(message));
     }
 
     @Execute(name = "help")
@@ -107,14 +146,26 @@ public class DoubleLifeCommand {
     }
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage(ComponentUtil.gradient(plugin.getLangConfig().getMessage("help.header"), "#FFD700", "#FF6B35"));
-        sender.sendMessage(ComponentUtil.info(plugin.getLangConfig().getMessage("help.gui")));
-        sender.sendMessage(ComponentUtil.info(plugin.getLangConfig().getMessage("help.start")));
-        sender.sendMessage(ComponentUtil.info(plugin.getLangConfig().getMessage("help.end")));
-        sender.sendMessage(ComponentUtil.info(plugin.getLangConfig().getMessage("help.status")));
+        boolean isPlayer = sender instanceof Player;
+        Player player = isPlayer ? (Player) sender : null;
+        
+        sender.sendMessage(ComponentUtil.gradient(
+            isPlayer ? plugin.getLangConfig().getMessage("help.header", player) : plugin.getLangConfig().getMessage("help.header"), 
+            "#FFD700", "#FF6B35"));
+        sender.sendMessage(ComponentUtil.info(
+            isPlayer ? plugin.getLangConfig().getMessage("help.gui", player) : plugin.getLangConfig().getMessage("help.gui")));
+        sender.sendMessage(ComponentUtil.info(
+            isPlayer ? plugin.getLangConfig().getMessage("help.start", player) : plugin.getLangConfig().getMessage("help.start")));
+        sender.sendMessage(ComponentUtil.info(
+            isPlayer ? plugin.getLangConfig().getMessage("help.turbo", player) : plugin.getLangConfig().getMessage("help.turbo")));
+        sender.sendMessage(ComponentUtil.info(
+            isPlayer ? plugin.getLangConfig().getMessage("help.end", player) : plugin.getLangConfig().getMessage("help.end")));
+        sender.sendMessage(ComponentUtil.info(
+            isPlayer ? plugin.getLangConfig().getMessage("help.status", player) : plugin.getLangConfig().getMessage("help.status")));
 
         if (sender.hasPermission("doublelife.admin")) {
-            sender.sendMessage(ComponentUtil.info(plugin.getLangConfig().getMessage("help.reload")));
+            sender.sendMessage(ComponentUtil.info(
+                isPlayer ? plugin.getLangConfig().getMessage("help.reload", player) : plugin.getLangConfig().getMessage("help.reload")));
         }
     }
 }

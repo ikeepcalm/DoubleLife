@@ -27,11 +27,13 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.38")
     implementation("dev.triumphteam:triumph-gui-paper:3.1.13-SNAPSHOT")
     implementation "dev.rollczi:litecommands-bukkit:3.9.7"
-    compileOnly("io.papermc.paper:paper-api:1.21.6-R0.1-SNAPSHOT")
+    implementation 'com.google.code.gson:gson:2.11.0'
+    compileOnly("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT")
 }
 
 shadowJar {
     relocate("dev.triumphteam.gui", "dev.ua.ikeepcalm.doublelife.triumphgui")
+    relocate("com.google.gson", "dev.ua.ikeepcalm.doublelife.gson")
 }
 
 tasks {

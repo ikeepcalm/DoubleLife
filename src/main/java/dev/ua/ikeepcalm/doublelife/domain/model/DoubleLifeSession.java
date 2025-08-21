@@ -17,10 +17,12 @@ public class DoubleLifeSession {
     private final Instant startTime;
     private Instant endTime;
     private final List<ActivityLog> activities;
+    private final DoubleLifeMode mode;
     
-    public DoubleLifeSession(UUID playerId, PlayerState savedState) {
+    public DoubleLifeSession(UUID playerId, PlayerState savedState, DoubleLifeMode mode) {
         this.playerId = playerId;
         this.savedState = savedState;
+        this.mode = mode;
         this.startTime = Instant.now();
         this.activities = new ArrayList<>();
     }

@@ -10,6 +10,8 @@ messages:
 # Session Messages
 session:
   start-success: "Double Life session started! You now have temporary admin permissions."
+  default-start-success: "Default Double Life session started! Command monitoring active."
+  turbo-start-success: "Turbo Double Life session started! Full admin permissions granted."
   start-failed: "Failed to start Double Life session."
   end-success: "Double Life session ended! Your permissions have been restored."
   end-failed: "You don't have an active session to end."
@@ -18,6 +20,8 @@ session:
   max-duration-reached: "Your Double Life session has reached the maximum duration and has been ended."
   on-cooldown: "You must wait {0} seconds before starting another session."
   cannot-start: "You cannot start a Double Life session right now."
+  turbo-permission-required: "You don't have permission to use Turbo mode. Contact an administrator to get the 'doublelife.turbo' permission."
+  restored-after-restart: "Your Double Life session has been restored after server restart."
   
 # Permission Messages  
 permissions:
@@ -45,6 +49,25 @@ gui:
     - ""
     - "Duration: {0} minutes"
     - "Cooldown: {1} minutes"
+  
+  default-button: "Default Mode"
+  default-button-lore:
+    - "Saves your state and enables"
+    - "command monitoring without"
+    - "changing your permissions"
+    - ""
+    - "Duration: {0} minutes"
+    - "Cooldown: {1} minutes"
+  
+  turbo-button: "Turbo Mode"  
+  turbo-button-lore:
+    - "Full admin permissions with"
+    - "complete state save/restore"
+    - "and comprehensive logging"
+    - ""
+    - "Duration: {0} minutes"
+    - "Cooldown: {1} minutes"
+    
   end-button: "End Admin Mode"
   end-button-lore:
     - "Click to end your current"
@@ -89,6 +112,8 @@ gui:
 # Boss Bar Messages
 bossbar:
   active-title: "Double Life Active"
+  default-active-title: "Double Life Default Mode"
+  turbo-active-title: "Double Life Turbo Mode"
   remaining-time: "Double Life - {0} minutes remaining"
   ending-soon: "Double Life - Session ending soon!"
 
@@ -109,11 +134,19 @@ webhook:
   session-started: "🟢 **{0}** started a Double Life session"
   session-ended: "🔴 **{0}** ended their Double Life session (Duration: {1})"
   session-timeout: "⏰ **{0}**'s Double Life session ended due to timeout"
+  default-mode-ended: "⚡ **{0}** ended their Default Double Life session"
+  turbo-mode-ended: "🚀 **{0}** ended their Turbo Double Life session - High Priority!"
   
+# Command Messages
+command:
+  restricted: "This command is restricted and requires Double Life mode to execute."
+  doublelife-required: "Please activate Double Life mode first: /doublelife or /doublelife turbo"
+
 # Command Help
 help:
   header: "=== Double Life Commands ==="
-  start: "/doublelife start - Start a temporary admin session"
+  start: "/doublelife start - Start a Default mode session"
+  turbo: "/doublelife turbo - Start a Turbo mode session"
   end: "/doublelife end - End your current admin session"  
   status: "/doublelife status - View session information"
   gui: "/doublelife - Open the Double Life menu"
