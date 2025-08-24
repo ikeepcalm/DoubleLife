@@ -22,6 +22,9 @@ session:
   cannot-start: "Наразі ви не можете розпочати сесію Double Life."
   turbo-permission-required: "У вас немає дозволу на використання турбо-режиму. Зверніться до адміністратора для отримання права 'doublelife.turbo'."
   restored-after-restart: "Вашу сесію Double Life відновлено після перезапуску сервера."
+  default-restored: "Стандартну сесію Double Life відновлено після перезапуску сервера."
+  turbo-restored: "Турбо-сесію Double Life відновлено після перезапуску сервера."
+  expired-during-restart: "Ваша сесія Double Life закінчилась, поки сервер був вимкнений."
 
 # Повідомлення про права доступу
 permissions:

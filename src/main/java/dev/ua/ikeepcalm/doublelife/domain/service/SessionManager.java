@@ -20,10 +20,11 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.io.*;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import org.bukkit.configuration.file.YamlConfiguration;
+import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 
 public class SessionManager {
 
@@ -32,13 +33,13 @@ public class SessionManager {
     private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
     private final Map<UUID, BukkitTask> sessionTimers = new ConcurrentHashMap<>();
     private final Map<UUID, BossBar> bossBars = new ConcurrentHashMap<>();
+    private List<SessionData> pendingSessions = new ArrayList<>();
 
-    private static final String SESSION_FILE = "sessions.json";
-    private final Gson gson = new Gson();
+    private static final String SESSIONS_FOLDER = "sessions";
 
     public SessionManager(DoubleLife plugin) {
         this.plugin = plugin;
-        loadSessionsOnStartup();
+        loadPendingSessionsFromFile();
     }
 
     public boolean canStartSession(Player player) {
@@ -149,65 +150,160 @@ public class SessionManager {
             return;
         }
 
-        File dataFolder = plugin.getDataFolder();
-        if (!dataFolder.exists()) {
-            dataFolder.mkdirs();
+        File sessionsFolder = new File(plugin.getDataFolder(), SESSIONS_FOLDER);
+        if (!sessionsFolder.exists()) {
+            sessionsFolder.mkdirs();
         }
 
-        File sessionFile = new File(dataFolder, SESSION_FILE);
-        try (FileWriter writer = new FileWriter(sessionFile)) {
-            Map<String, Object> sessionData = new HashMap<>();
-            for (Map.Entry<UUID, DoubleLifeSession> entry : activeSessions.entrySet()) {
+        int savedCount = 0;
+        for (Map.Entry<UUID, DoubleLifeSession> entry : activeSessions.entrySet()) {
+            try {
+                Player player = Bukkit.getPlayer(entry.getKey());
+                if (player == null) continue;
+                
                 DoubleLifeSession session = entry.getValue();
-                Map<String, Object> data = new HashMap<>();
-                data.put("mode", session.getMode().name());
-                data.put("savedState", session.getSavedState());
-                data.put("startTime", session.getStartTime().toString());
-                sessionData.put(entry.getKey().toString(), data);
+                SessionData sessionData = SessionData.fromSession(session, player.getName());
+                
+                saveSessionToYaml(sessionData, player.getName());
+                savedCount++;
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to save session for player " + entry.getKey() + ": " + e.getMessage());
             }
-            gson.toJson(sessionData, writer);
-            plugin.getLogger().info("Saved " + activeSessions.size() + " active sessions to disk");
-        } catch (IOException e) {
-            plugin.getLogger().severe("Failed to save sessions: " + e.getMessage());
+        }
+        
+        plugin.getLogger().info("Saved " + savedCount + " active sessions to individual YAML files");
+    }
+    
+    private void saveSessionToYaml(SessionData sessionData, String playerName) {
+        try {
+            File sessionsFolder = new File(plugin.getDataFolder(), SESSIONS_FOLDER);
+            File sessionFile = new File(sessionsFolder, playerName + ".yml");
+            
+            YamlConfiguration yaml = new YamlConfiguration();
+            yaml.set("session", sessionData);
+            yaml.save(sessionFile);
+            
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to save session YAML for " + playerName + ": " + e.getMessage());
         }
     }
 
-    private void loadSessionsOnStartup() {
-        File sessionFile = new File(plugin.getDataFolder(), SESSION_FILE);
-        if (!sessionFile.exists()) {
+    private void loadPendingSessionsFromFile() {
+        File sessionsFolder = new File(plugin.getDataFolder(), SESSIONS_FOLDER);
+        if (!sessionsFolder.exists()) {
             return;
         }
 
-        try (FileReader reader = new FileReader(sessionFile)) {
-            TypeToken<Map<String, Map<String, Object>>> typeToken = new TypeToken<Map<String, Map<String, Object>>>() {};
-            Map<String, Map<String, Object>> sessionData = gson.fromJson(reader, typeToken.getType());
-            
-            if (sessionData != null) {
-                for (Map.Entry<String, Map<String, Object>> entry : sessionData.entrySet()) {
-                    UUID playerId = UUID.fromString(entry.getKey());
-                    Player player = Bukkit.getPlayer(playerId);
-                    
-                    if (player != null) {
-                        Map<String, Object> data = entry.getValue();
-                        DoubleLifeMode mode = DoubleLifeMode.valueOf((String) data.get("mode"));
-                        
-                        // Restore the player's saved state
-                        Object savedStateObj = data.get("savedState");
-                        if (savedStateObj instanceof Map) {
-                            // Convert the saved state back to PlayerState object
-                            // This is a simplified version - you may need to implement proper deserialization
-                            plugin.getLogger().info("Restoring session for " + player.getName() + " in " + mode.getDisplayName());
-                            player.sendMessage(ComponentUtil.warning(plugin.getLangConfig().getMessage("session.restored-after-restart", player)));
-                        }
-                    }
-                }
-                plugin.getLogger().info("Restored sessions for " + sessionData.size() + " players after restart");
-            }
+        File[] sessionFiles = sessionsFolder.listFiles((dir, name) -> name.endsWith(".yml"));
+        if (sessionFiles == null || sessionFiles.length == 0) {
+            return;
+        }
 
-            // Delete the session file after loading
+        int loadedCount = 0;
+        for (File sessionFile : sessionFiles) {
+            try {
+                SessionData sessionData = loadSessionFromYaml(sessionFile);
+                if (sessionData != null) {
+                    pendingSessions.add(sessionData);
+                    loadedCount++;
+                }
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to load session file " + sessionFile.getName() + ": " + e.getMessage());
+                // Delete corrupted file
+                sessionFile.delete();
+            }
+        }
+        
+        if (loadedCount > 0) {
+            plugin.getLogger().info("Loaded " + loadedCount + " pending sessions from YAML files");
+        }
+    }
+    
+    private SessionData loadSessionFromYaml(File sessionFile) {
+        try {
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(sessionFile);
+            SessionData sessionData = (SessionData) yaml.get("session");
+            
+            // Delete the file after loading to prevent re-loading
             sessionFile.delete();
-        } catch (IOException e) {
-            plugin.getLogger().severe("Failed to load sessions: " + e.getMessage());
+            
+            return sessionData;
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to load session YAML from " + sessionFile.getName() + ": " + e.getMessage());
+            return null;
+        }
+    }
+    
+    public void restoreSessionForPlayer(Player player) {
+        if (pendingSessions.isEmpty()) {
+            return;
+        }
+        
+        UUID playerId = player.getUniqueId();
+        SessionData sessionToRestore = null;
+        
+        // Find session for this player
+        for (SessionData sessionData : pendingSessions) {
+            if (sessionData.getPlayerId().equals(playerId.toString())) {
+                sessionToRestore = sessionData;
+                break;
+            }
+        }
+        
+        if (sessionToRestore == null) {
+            return;
+        }
+        
+        try {
+            // Check if player already has an active session
+            if (hasActiveSession(player)) {
+                plugin.getLogger().warning("Player " + player.getName() + " already has an active session, skipping restoration");
+                pendingSessions.remove(sessionToRestore);
+                return;
+            }
+            
+            // Restore the session
+            DoubleLifeMode mode = DoubleLifeMode.valueOf(sessionToRestore.getSessionType().toUpperCase());
+            PlayerState playerState = sessionToRestore.getSavedState().toPlayerState();
+            
+            // Create and restore the session
+            DoubleLifeSession restoredSession = new DoubleLifeSession(
+                playerId, 
+                playerState, 
+                mode, 
+                sessionToRestore.getStartTimeAsDateTime()
+            );
+            
+            // Check if session has expired while server was down
+            if (restoredSession.getDuration().toMinutes() >= plugin.getPluginConfig().getMaxDuration()) {
+                plugin.getLogger().info("Session for " + player.getName() + " has expired, not restoring");
+                player.sendMessage(ComponentUtil.warning(plugin.getLangConfig().getMessage("session.expired-during-restart", player)));
+                pendingSessions.remove(sessionToRestore);
+                return;
+            }
+            
+            activeSessions.put(playerId, restoredSession);
+            
+            // Re-apply admin permissions if it's turbo mode
+            if (mode == DoubleLifeMode.TURBO) {
+                applyAdminMode(player);
+            }
+            
+            // Restart timer and boss bar
+            startTimer(player, restoredSession);
+            createBossBar(player, mode);
+            
+            // Notify player
+            player.sendMessage(ComponentUtil.success(plugin.getLangConfig().getMessage("session.restored-after-restart", player)));
+            
+            plugin.getLogger().info("Restored " + mode.getDisplayName() + " session for " + player.getName());
+            
+            // Remove from pending sessions
+            pendingSessions.remove(sessionToRestore);
+            
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to restore session for player " + player.getName() + ": " + e.getMessage());
+            pendingSessions.remove(sessionToRestore);
         }
     }
 

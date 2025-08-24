@@ -22,6 +22,9 @@ session:
   cannot-start: "You cannot start a Double Life session right now."
   turbo-permission-required: "You don't have permission to use Turbo mode. Contact an administrator to get the 'doublelife.turbo' permission."
   restored-after-restart: "Your Double Life session has been restored after server restart."
+  default-restored: "Default Double Life session restored after server restart."
+  turbo-restored: "Turbo Double Life session restored after server restart."
+  expired-during-restart: "Your Double Life session expired while the server was offline."
   
 # Permission Messages  
 permissions:
