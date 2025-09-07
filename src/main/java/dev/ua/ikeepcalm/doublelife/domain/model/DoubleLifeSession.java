@@ -14,7 +14,7 @@ public class DoubleLifeSession {
     
     private final UUID playerId;
     private final PlayerState savedState;
-    private final Instant startTime;
+    private Instant startTime;
     private Instant endTime;
     private final List<ActivityLog> activities;
     private final DoubleLifeMode mode;
@@ -46,5 +46,9 @@ public class DoubleLifeSession {
     
     public boolean isActive() {
         return endTime == null;
+    }
+    
+    public void extendSession(long extensionMillis) {
+        this.startTime = this.startTime.minusMillis(extensionMillis);
     }
 }

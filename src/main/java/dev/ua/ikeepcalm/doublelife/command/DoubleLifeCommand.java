@@ -1,5 +1,6 @@
 package dev.ua.ikeepcalm.doublelife.command;
 
+import dev.rollczi.litecommands.annotations.argument.Arg;
 import dev.rollczi.litecommands.annotations.command.Command;
 import dev.rollczi.litecommands.annotations.context.Context;
 import dev.rollczi.litecommands.annotations.execute.Execute;
@@ -89,6 +90,25 @@ public class DoubleLifeCommand {
         plugin.getSessionManager().endSession(player);
     }
 
+    @Execute(name = "prolong", aliases = {"extend"})
+    @Permission("doublelife.admin")
+    public void prolong(@Context Player player, @Arg int minutes) {
+        if (!plugin.getSessionManager().hasActiveSession(player)) {
+            player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.no-active-session", player)));
+            return;
+        }
+
+        if (minutes <= 0 || minutes > 120) {
+            player.sendMessage(ComponentUtil.error("Minutes must be between 1 and 120."));
+            return;
+        }
+
+        boolean success = plugin.getSessionManager().prolongSession(player, minutes);
+        if (!success) {
+            player.sendMessage(ComponentUtil.error("Cannot extend session - would exceed safety limits."));
+        }
+    }
+
     @Execute(name = "status")
     @Permission("doublelife.status")
     public void status(@Context CommandSender sender, @OptionalArg Player target) {
@@ -166,6 +186,7 @@ public class DoubleLifeCommand {
         if (sender.hasPermission("doublelife.admin")) {
             sender.sendMessage(ComponentUtil.info(
                 isPlayer ? plugin.getLangConfig().getMessage("help.reload", player) : plugin.getLangConfig().getMessage("help.reload")));
+            sender.sendMessage(ComponentUtil.info("/doublelife prolong <minutes> - Extend active session"));
         }
     }
 }

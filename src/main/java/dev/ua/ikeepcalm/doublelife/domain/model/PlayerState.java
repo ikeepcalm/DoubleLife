@@ -27,6 +27,8 @@ public class PlayerState {
     private Collection<PotionEffect> potionEffects;
     private Location location;
     private GameMode gameMode;
+    private boolean allowFlight;
+    private boolean isFlying;
     private Map<String, Object> metadata;
     
     public static PlayerState capture(Player player) {
@@ -42,6 +44,8 @@ public class PlayerState {
             .potionEffects(player.getActivePotionEffects())
             .location(player.getLocation().clone())
             .gameMode(player.getGameMode())
+            .allowFlight(false)
+            .isFlying(false)
             .metadata(new HashMap<>())
             .build();
     }
@@ -63,5 +67,7 @@ public class PlayerState {
         
         player.teleport(location);
         player.setGameMode(gameMode);
+        player.setAllowFlight(allowFlight);
+        player.setFlying(isFlying);
     }
 }

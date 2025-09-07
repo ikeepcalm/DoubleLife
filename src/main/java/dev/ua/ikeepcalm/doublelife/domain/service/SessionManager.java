@@ -332,4 +332,31 @@ public class SessionManager {
         long remaining = cooldownEnd - System.currentTimeMillis();
         return Math.max(0, remaining / 1000);
     }
+
+    public boolean prolongSession(Player player, int additionalMinutes) {
+        DoubleLifeSession session = activeSessions.get(player.getUniqueId());
+        if (session == null) {
+            return false;
+        }
+
+        long currentDuration = session.getDuration().toMinutes();
+        long maxDuration = plugin.getPluginConfig().getMaxDuration();
+        long newTotalDuration = currentDuration + additionalMinutes;
+        
+        if (newTotalDuration > maxDuration * 2) {
+            return false;
+        }
+
+        long extensionMillis = additionalMinutes * 60L * 1000L;
+        session.extendSession(extensionMillis);
+
+        updateBossBar(player, session);
+
+        player.sendMessage(ComponentUtil.success(
+            plugin.getLangConfig().getMessage("session.extended-success", player, additionalMinutes)
+        ));
+        plugin.getLogger().info("Extended session for " + player.getName() + " by " + additionalMinutes + " minutes");
+
+        return true;
+    }
 }
