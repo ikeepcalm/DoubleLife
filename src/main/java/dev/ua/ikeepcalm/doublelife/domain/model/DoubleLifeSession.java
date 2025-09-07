@@ -26,7 +26,16 @@ public class DoubleLifeSession {
         this.startTime = Instant.now();
         this.activities = new ArrayList<>();
     }
-    
+
+    // Constructor for restoring sessions with specific start time
+    public DoubleLifeSession(UUID playerId, PlayerState savedState, DoubleLifeMode mode, LocalDateTime startTime) {
+        this.playerId = playerId;
+        this.savedState = savedState;
+        this.mode = mode;
+        this.startTime = startTime.atZone(ZoneId.systemDefault()).toInstant();
+        this.activities = new ArrayList<>();
+    }
+
     public void logActivity(ActivityLog activity) {
         activities.add(activity);
     }
@@ -47,7 +56,11 @@ public class DoubleLifeSession {
     public boolean isActive() {
         return endTime == null;
     }
-    
+
+    public LocalDateTime getStartTime() {
+        return LocalDateTime.ofInstant(startTime, ZoneId.systemDefault());
+    }
+
     public void extendSession(long extensionMillis) {
         this.startTime = this.startTime.minusMillis(extensionMillis);
     }
