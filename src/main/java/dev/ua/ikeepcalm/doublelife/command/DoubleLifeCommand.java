@@ -91,7 +91,7 @@ public class DoubleLifeCommand {
     }
 
     @Execute(name = "prolong", aliases = {"extend"})
-    @Permission("doublelife.admin")
+    @Permission("doublelife.prolong")
     public void prolong(@Context Player player, @Arg int minutes) {
         if (!plugin.getSessionManager().hasActiveSession(player)) {
             player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.no-active-session", player)));
@@ -183,7 +183,7 @@ public class DoubleLifeCommand {
         sender.sendMessage(ComponentUtil.info(
             isPlayer ? plugin.getLangConfig().getMessage("help.status", player) : plugin.getLangConfig().getMessage("help.status")));
 
-        if (sender.hasPermission("doublelife.admin")) {
+        if (sender.hasPermission("doublelife.prolong")) {
             sender.sendMessage(ComponentUtil.info(
                 isPlayer ? plugin.getLangConfig().getMessage("help.reload", player) : plugin.getLangConfig().getMessage("help.reload")));
             sender.sendMessage(ComponentUtil.info("/doublelife prolong <minutes> - Extend active session"));
