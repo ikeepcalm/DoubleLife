@@ -268,14 +268,17 @@ public class SessionManager {
             
             // Create and restore the session
             DoubleLifeSession restoredSession = new DoubleLifeSession(
-                playerId, 
-                playerState, 
-                mode, 
-                sessionToRestore.getStartTimeAsDateTime()
+                playerId,
+                playerState,
+                mode,
+                sessionToRestore.getStartTimeAsDateTime(),
+                sessionToRestore.getExtensionMinutes()
             );
-            
+
             // Check if session has expired while server was down
-            if (restoredSession.getDuration().toMinutes() >= plugin.getPluginConfig().getMaxDuration()) {
+            long baseDuration = plugin.getPluginConfig().getMaxDuration();
+            long totalAllowedMinutes = restoredSession.getTotalAllowedMinutes(baseDuration);
+            if (restoredSession.getDuration().toMinutes() >= totalAllowedMinutes) {
                 plugin.getLogger().info("Session for " + player.getName() + " has expired, not restoring");
                 player.sendMessage(ComponentUtil.warning(plugin.getLangConfig().getMessage("session.expired-during-restart", player)));
                 pendingSessions.remove(sessionToRestore);
@@ -360,7 +363,9 @@ public class SessionManager {
         BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             updateBossBar(player, session);
 
-            if (session.getDuration().toMinutes() >= plugin.getPluginConfig().getMaxDuration()) {
+            long maxDuration = plugin.getPluginConfig().getMaxDuration();
+            long totalAllowedMinutes = session.getTotalAllowedMinutes(maxDuration);
+            if (session.getDuration().toMinutes() >= totalAllowedMinutes) {
                 endSession(player);
             }
         }, 0L, 20L);
@@ -388,10 +393,11 @@ public class SessionManager {
         if (bossBar == null) return;
 
         Duration duration = session.getDuration();
-        long maxMinutes = plugin.getPluginConfig().getMaxDuration();
-        float progress = 1.0f - (float) duration.toMinutes() / maxMinutes;
+        long baseDuration = plugin.getPluginConfig().getMaxDuration();
+        long totalAllowedMinutes = session.getTotalAllowedMinutes(baseDuration);
+        float progress = 1.0f - (float) duration.toMinutes() / totalAllowedMinutes;
 
-        long remainingMinutes = maxMinutes - duration.toMinutes();
+        long remainingMinutes = totalAllowedMinutes - duration.toMinutes();
         String titleText = plugin.getLangConfig().getMessage("bossbar.remaining-time", remainingMinutes);
         Component title = ComponentUtil.gradient(titleText, "#FFD700", "#FF6B35");
 
@@ -435,11 +441,12 @@ public class SessionManager {
             return false;
         }
 
-        long currentDuration = session.getDuration().toMinutes();
-        long maxDuration = plugin.getPluginConfig().getMaxDuration();
-        long newTotalDuration = currentDuration + additionalMinutes;
-        
-        if (newTotalDuration > maxDuration * 2) {
+        long baseDuration = plugin.getPluginConfig().getMaxDuration();
+        long currentTotalAllowed = session.getTotalAllowedMinutes(baseDuration);
+        long newTotalAllowed = currentTotalAllowed + additionalMinutes;
+
+        // Safety limit: don't allow more than 2x the base duration
+        if (newTotalAllowed > baseDuration * 2) {
             return false;
         }
 

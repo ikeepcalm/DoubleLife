@@ -19,6 +19,7 @@ public class SessionData implements ConfigurationSerializable {
     private String endTime;
     private String sessionType; // "default" or "turbo"
     private SerializablePlayerState savedState;
+    private long extensionMinutes;
     
     public static SessionData fromSession(DoubleLifeSession session, String playerName) {
         return SessionData.builder()
@@ -28,6 +29,7 @@ public class SessionData implements ConfigurationSerializable {
             .endTime(null) // null for active sessions
             .sessionType(session.getMode().name().toLowerCase())
             .savedState(SerializablePlayerState.fromPlayerState(session.getSavedState()))
+            .extensionMinutes(session.getExtensionMinutes())
             .build();
     }
     
@@ -61,6 +63,7 @@ public class SessionData implements ConfigurationSerializable {
         if (savedState != null) {
             map.put("savedState", savedState.serialize());
         }
+        map.put("extensionMinutes", extensionMinutes);
         return map;
     }
     
@@ -72,11 +75,16 @@ public class SessionData implements ConfigurationSerializable {
         builder.startTime((String) map.get("startTime"));
         builder.endTime((String) map.get("endTime"));
         builder.sessionType((String) map.get("sessionType"));
-        
+
         @SuppressWarnings("unchecked")
         Map<String, Object> stateMap = (Map<String, Object>) map.get("savedState");
         if (stateMap != null) {
             builder.savedState(SerializablePlayerState.deserialize(stateMap));
+        }
+
+        Object extensionMinutesObj = map.get("extensionMinutes");
+        if (extensionMinutesObj != null) {
+            builder.extensionMinutes(((Number) extensionMinutesObj).longValue());
         }
         
         return builder.build();

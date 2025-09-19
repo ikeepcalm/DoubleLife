@@ -25,6 +25,7 @@ session:
   default-restored: "Стандартну сесію Double Life відновлено після перезапуску сервера."
   turbo-restored: "Турбо-сесію Double Life відновлено після перезапуску сервера."
   expired-during-restart: "Ваша сесія Double Life закінчилась, поки сервер був вимкнений."
+  extended-success: "Сесію успішно продовжено на {0} хвилин!"
 
 # Повідомлення про права доступу
 permissions:
@@ -153,6 +154,7 @@ help:
   end: "/doublelife end - Завершити поточну адмін-сесію"
   status: "/doublelife status - Переглянути інформацію про сесію"
   gui: "/doublelife - Відкрити меню Double Life"
+  prolong: "/doublelife prolong <хвилини> - Продовжити активну сесію"
   reload: "/doublelife reload - Перезавантажити конфігурацію плагіна"
   help: "/doublelife help - Показати це повідомлення довідки"
 

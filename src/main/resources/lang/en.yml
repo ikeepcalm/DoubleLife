@@ -25,6 +25,7 @@ session:
   default-restored: "Default Double Life session restored after server restart."
   turbo-restored: "Turbo Double Life session restored after server restart."
   expired-during-restart: "Your Double Life session expired while the server was offline."
+  extended-success: "Session extended by {0} minutes successfully!"
   
 # Permission Messages  
 permissions:
@@ -150,9 +151,10 @@ help:
   header: "=== Double Life Commands ==="
   start: "/doublelife start - Start a Default mode session"
   turbo: "/doublelife turbo - Start a Turbo mode session"
-  end: "/doublelife end - End your current admin session"  
+  end: "/doublelife end - End your current admin session"
   status: "/doublelife status - View session information"
   gui: "/doublelife - Open the Double Life menu"
+  prolong: "/doublelife prolong <minutes> - Extend active session"
   reload: "/doublelife reload - Reload plugin configuration"
   help: "/doublelife help - Show this help message"
 

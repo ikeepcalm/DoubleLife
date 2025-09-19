@@ -13,13 +13,14 @@ import java.util.UUID;
 
 @Getter
 public class DoubleLifeSession {
-    
+
     private final UUID playerId;
     private final PlayerState savedState;
     private Instant startTime;
     private Instant endTime;
     private final List<ActivityLog> activities;
     private final DoubleLifeMode mode;
+    private long extensionMinutes = 0;
     
     public DoubleLifeSession(UUID playerId, PlayerState savedState, DoubleLifeMode mode) {
         this.playerId = playerId;
@@ -35,6 +36,15 @@ public class DoubleLifeSession {
         this.mode = mode;
         this.startTime = startTime.atZone(ZoneId.systemDefault()).toInstant();
         this.activities = new ArrayList<>();
+    }
+
+    public DoubleLifeSession(UUID playerId, PlayerState savedState, DoubleLifeMode mode, LocalDateTime startTime, long extensionMinutes) {
+        this.playerId = playerId;
+        this.savedState = savedState;
+        this.mode = mode;
+        this.startTime = startTime.atZone(ZoneId.systemDefault()).toInstant();
+        this.activities = new ArrayList<>();
+        this.extensionMinutes = extensionMinutes;
     }
 
     public void logActivity(ActivityLog activity) {
@@ -64,5 +74,10 @@ public class DoubleLifeSession {
 
     public void extendSession(long extensionMillis) {
         this.startTime = this.startTime.minusMillis(extensionMillis);
+        this.extensionMinutes += extensionMillis / (60 * 1000);
+    }
+
+    public long getTotalAllowedMinutes(long baseDurationMinutes) {
+        return baseDurationMinutes + extensionMinutes;
     }
 }

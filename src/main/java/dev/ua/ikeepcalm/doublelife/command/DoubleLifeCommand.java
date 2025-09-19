@@ -132,7 +132,9 @@ public class DoubleLifeCommand {
 
         DoubleLifeSession session = plugin.getSessionManager().getSession(checkPlayer);
         Duration duration = session.getDuration();
-        long remainingMinutes = plugin.getPluginConfig().getMaxDuration() - duration.toMinutes();
+        long baseDuration = plugin.getPluginConfig().getMaxDuration();
+        long totalAllowedMinutes = session.getTotalAllowedMinutes(baseDuration);
+        long remainingMinutes = totalAllowedMinutes - duration.toMinutes();
 
         sender.sendMessage(ComponentUtil.gradient("=== Double Life Status ===", "#FFD700", "#FF6B35"));
         sender.sendMessage(ComponentUtil.info("Player: " + checkPlayer.getName()));
@@ -185,8 +187,12 @@ public class DoubleLifeCommand {
 
         if (sender.hasPermission("doublelife.prolong")) {
             sender.sendMessage(ComponentUtil.info(
+                isPlayer ? plugin.getLangConfig().getMessage("help.prolong", player) : plugin.getLangConfig().getMessage("help.prolong")));
+        }
+
+        if (sender.hasPermission("doublelife.admin")) {
+            sender.sendMessage(ComponentUtil.info(
                 isPlayer ? plugin.getLangConfig().getMessage("help.reload", player) : plugin.getLangConfig().getMessage("help.reload")));
-            sender.sendMessage(ComponentUtil.info("/doublelife prolong <minutes> - Extend active session"));
         }
     }
 }
