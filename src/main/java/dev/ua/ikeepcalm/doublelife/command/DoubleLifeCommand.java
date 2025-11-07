@@ -7,8 +7,8 @@ import dev.rollczi.litecommands.annotations.execute.Execute;
 import dev.rollczi.litecommands.annotations.optional.OptionalArg;
 import dev.rollczi.litecommands.annotations.permission.Permission;
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeMode;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeSession;
+import dev.ua.ikeepcalm.doublelife.domain.model.source.DoubleLifeMode;
+import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import dev.ua.ikeepcalm.doublelife.gui.DoubleLifeGUI;
 import dev.ua.ikeepcalm.doublelife.util.ComponentUtil;
 import org.bukkit.command.CommandSender;
@@ -130,7 +130,7 @@ public class DoubleLifeCommand {
             return;
         }
 
-        DoubleLifeSession session = plugin.getSessionManager().getSession(checkPlayer);
+        SessionData session = plugin.getSessionManager().getSession(checkPlayer);
         Duration duration = session.getDuration();
         long baseDuration = plugin.getPluginConfig().getMaxDuration();
         long totalAllowedMinutes = session.getTotalAllowedMinutes(baseDuration);

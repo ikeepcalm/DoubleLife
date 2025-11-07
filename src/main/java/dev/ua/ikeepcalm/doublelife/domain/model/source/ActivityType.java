@@ -4,6 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum ActivityType {
+
     COMMAND("Command Executed"),
     GAMEMODE_CHANGE("Gamemode Changed"),
     ITEM_GIVE("Item Given"),

@@ -2,8 +2,8 @@ package dev.ua.ikeepcalm.doublelife.util;
 
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
 import dev.ua.ikeepcalm.doublelife.domain.model.ActivityLog;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeMode;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeSession;
+import dev.ua.ikeepcalm.doublelife.domain.model.source.DoubleLifeMode;
+import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import dev.ua.ikeepcalm.doublelife.domain.model.source.ActivityType;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -21,11 +21,11 @@ import java.util.Map;
 public class LogWriter {
 
     private final DoubleLife plugin;
-    private final DoubleLifeSession session;
+    private final SessionData session;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
     private final DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm:ss");
 
-    public LogWriter(DoubleLife plugin, DoubleLifeSession session) {
+    public LogWriter(DoubleLife plugin, SessionData session) {
         this.plugin = plugin;
         this.session = session;
     }

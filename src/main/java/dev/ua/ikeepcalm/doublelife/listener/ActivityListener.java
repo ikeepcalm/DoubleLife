@@ -2,7 +2,7 @@ package dev.ua.ikeepcalm.doublelife.listener;
 
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
 import dev.ua.ikeepcalm.doublelife.domain.model.source.ActivityType;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeSession;
+import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -37,7 +37,7 @@ public class ActivityListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onCommand(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         if (session == null || !plugin.getPluginConfig().isLogCommands()) return;
         
         String command = event.getMessage();
@@ -48,7 +48,7 @@ public class ActivityListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onGameModeChange(PlayerGameModeChangeEvent event) {
         Player player = event.getPlayer();
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         if (session == null || !plugin.getPluginConfig().isLogGamemodeChanges()) return;
         
         String details = event.getCause() + ": " + player.getGameMode() + " -> " + event.getNewGameMode();
@@ -60,7 +60,7 @@ public class ActivityListener implements Listener {
     public void onBlockPlace(BlockPlaceEvent event) {
         if (!plugin.getPluginConfig().isLogBlockPlacements()) return;
         Player player = event.getPlayer();
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         if (session == null) return;
         
         addBlockToBatch(player, event.getBlock(), true);
@@ -70,7 +70,7 @@ public class ActivityListener implements Listener {
     public void onBlockBreak(BlockBreakEvent event) {
         if (!plugin.getPluginConfig().isLogBlockPlacements()) return;
         Player player = event.getPlayer();
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         if (session == null) return;
         
         addBlockToBatch(player, event.getBlock(), false);
@@ -79,7 +79,7 @@ public class ActivityListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryOpen(InventoryOpenEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         if (session == null || !plugin.getPluginConfig().isLogContainerAccess()) return;
         
         Inventory inv = event.getInventory();
@@ -93,7 +93,7 @@ public class ActivityListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         if (session == null || !plugin.getPluginConfig().isLogContainerAccess()) return;
         
         if (event.getClickedInventory() == null || event.getCurrentItem() == null) return;
@@ -112,7 +112,7 @@ public class ActivityListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onItemDrop(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         if (session == null || !plugin.getPluginConfig().isLogItemDrops()) return;
         
         ItemStack item = event.getItemDrop().getItemStack();
@@ -124,7 +124,7 @@ public class ActivityListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onItemPickup(EntityPickupItemEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         if (session == null || !plugin.getPluginConfig().isLogItemDrops()) return;
         
         ItemStack item = event.getItem().getItemStack();
@@ -136,7 +136,7 @@ public class ActivityListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         if (session == null) return;
         
         String fromLoc = formatLocation(event.getFrom());
@@ -161,7 +161,7 @@ public class ActivityListener implements Listener {
     }
     
     private void processBatch(Player player, List<Block> blocks, boolean isPlace) {
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         if (session == null) return;
         
         Map<Material, Integer> counts = new HashMap<>();

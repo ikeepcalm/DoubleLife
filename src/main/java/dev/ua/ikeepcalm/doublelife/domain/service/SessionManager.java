@@ -1,8 +1,8 @@
 package dev.ua.ikeepcalm.doublelife.domain.service;
 
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeMode;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeSession;
+import dev.ua.ikeepcalm.doublelife.domain.model.source.DoubleLifeMode;
+import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import dev.ua.ikeepcalm.doublelife.domain.model.PlayerState;
 import dev.ua.ikeepcalm.doublelife.util.ComponentUtil;
 import dev.ua.ikeepcalm.doublelife.util.LogWriter;
@@ -20,16 +20,14 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.io.*;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.configuration.file.YamlConfiguration;
-import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 
 public class SessionManager {
 
     private final DoubleLife plugin;
-    private final Map<UUID, DoubleLifeSession> activeSessions = new ConcurrentHashMap<>();
+    private final Map<UUID, SessionData> activeSessions = new ConcurrentHashMap<>();
     private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
     private final Map<UUID, BukkitTask> sessionTimers = new ConcurrentHashMap<>();
     private final Map<UUID, BossBar> bossBars = new ConcurrentHashMap<>();
@@ -79,13 +77,15 @@ public class SessionManager {
         }
 
         PlayerState savedState = PlayerState.capture(player);
-        DoubleLifeSession session = new DoubleLifeSession(player.getUniqueId(), savedState, mode);
+        SessionData session = new SessionData(player.getUniqueId(), savedState, mode);
         activeSessions.put(player.getUniqueId(), session);
 
+        // Clear inventory and execute entry commands for both modes
+        player.getInventory().clear();
+        executeEntryCommands(player);
+
         if (mode == DoubleLifeMode.TURBO) {
-            player.getInventory().clear();
             applyAdminMode(player);
-            executeEntryCommands(player);
             // Send immediate Discord notification for turbo mode activation
             plugin.getWebhookUtil().sendTurboModeActivation(player.getName());
         }
@@ -103,7 +103,7 @@ public class SessionManager {
     }
 
     public void endSession(Player player) {
-        DoubleLifeSession session = activeSessions.remove(player.getUniqueId());
+        SessionData session = activeSessions.remove(player.getUniqueId());
         if (session == null) {
             return;
         }
@@ -156,33 +156,31 @@ public class SessionManager {
         }
 
         int savedCount = 0;
-        for (Map.Entry<UUID, DoubleLifeSession> entry : activeSessions.entrySet()) {
+        for (Map.Entry<UUID, SessionData> entry : activeSessions.entrySet()) {
             try {
                 Player player = Bukkit.getPlayer(entry.getKey());
                 if (player == null) continue;
-                
-                DoubleLifeSession session = entry.getValue();
-                SessionData sessionData = SessionData.fromSession(session, player.getName());
-                
-                saveSessionToYaml(sessionData, player.getName());
+
+                SessionData session = entry.getValue();
+                saveSessionToYaml(session, player.getName());
                 savedCount++;
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to save session for player " + entry.getKey() + ": " + e.getMessage());
             }
         }
-        
+
         plugin.getLogger().info("Saved " + savedCount + " active sessions to individual YAML files");
     }
-    
-    private void saveSessionToYaml(SessionData sessionData, String playerName) {
+
+    private void saveSessionToYaml(SessionData session, String playerName) {
         try {
             File sessionsFolder = new File(plugin.getDataFolder(), SESSIONS_FOLDER);
             File sessionFile = new File(sessionsFolder, playerName + ".yml");
-            
+
             YamlConfiguration yaml = new YamlConfiguration();
-            yaml.set("session", sessionData);
+            yaml.set("session", session);
             yaml.save(sessionFile);
-            
+
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to save session YAML for " + playerName + ": " + e.getMessage());
         }
@@ -202,9 +200,9 @@ public class SessionManager {
         int loadedCount = 0;
         for (File sessionFile : sessionFiles) {
             try {
-                SessionData sessionData = loadSessionFromYaml(sessionFile);
-                if (sessionData != null) {
-                    pendingSessions.add(sessionData);
+                SessionData session = loadSessionFromYaml(sessionFile);
+                if (session != null) {
+                    pendingSessions.add(session);
                     loadedCount++;
                 }
             } catch (Exception e) {
@@ -213,21 +211,21 @@ public class SessionManager {
                 sessionFile.delete();
             }
         }
-        
+
         if (loadedCount > 0) {
             plugin.getLogger().info("Loaded " + loadedCount + " pending sessions from YAML files");
         }
     }
-    
+
     private SessionData loadSessionFromYaml(File sessionFile) {
         try {
             YamlConfiguration yaml = YamlConfiguration.loadConfiguration(sessionFile);
-            SessionData sessionData = (SessionData) yaml.get("session");
-            
+            SessionData session = (SessionData) yaml.get("session");
+
             // Delete the file after loading to prevent re-loading
             sessionFile.delete();
-            
-            return sessionData;
+
+            return session;
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to load session YAML from " + sessionFile.getName() + ": " + e.getMessage());
             return null;
@@ -238,72 +236,52 @@ public class SessionManager {
         if (pendingSessions.isEmpty()) {
             return;
         }
-        
+
         UUID playerId = player.getUniqueId();
         SessionData sessionToRestore = null;
-        
-        // Find session for this player
-        for (SessionData sessionData : pendingSessions) {
-            if (sessionData.getPlayerId().equals(playerId.toString())) {
-                sessionToRestore = sessionData;
+
+        for (SessionData session : pendingSessions) {
+            if (session.getPlayerId().equals(playerId)) {
+                sessionToRestore = session;
                 break;
             }
         }
-        
+
         if (sessionToRestore == null) {
             return;
         }
-        
+
         try {
-            // Check if player already has an active session
             if (hasActiveSession(player)) {
                 plugin.getLogger().warning("Player " + player.getName() + " already has an active session, skipping restoration");
                 pendingSessions.remove(sessionToRestore);
                 return;
             }
-            
-            // Restore the session
-            DoubleLifeMode mode = DoubleLifeMode.valueOf(sessionToRestore.getSessionType().toUpperCase());
-            PlayerState playerState = sessionToRestore.getSavedState().toPlayerState();
-            
-            // Create and restore the session
-            DoubleLifeSession restoredSession = new DoubleLifeSession(
-                playerId,
-                playerState,
-                mode,
-                sessionToRestore.getStartTimeAsDateTime(),
-                sessionToRestore.getExtensionMinutes()
-            );
 
-            // Check if session has expired while server was down
             long baseDuration = plugin.getPluginConfig().getMaxDuration();
-            long totalAllowedMinutes = restoredSession.getTotalAllowedMinutes(baseDuration);
-            if (restoredSession.getDuration().toMinutes() >= totalAllowedMinutes) {
+            long totalAllowedMinutes = sessionToRestore.getTotalAllowedMinutes(baseDuration);
+            if (sessionToRestore.getDuration().toMinutes() >= totalAllowedMinutes) {
                 plugin.getLogger().info("Session for " + player.getName() + " has expired, not restoring");
                 player.sendMessage(ComponentUtil.warning(plugin.getLangConfig().getMessage("session.expired-during-restart", player)));
                 pendingSessions.remove(sessionToRestore);
                 return;
             }
-            
-            activeSessions.put(playerId, restoredSession);
-            
-            // Re-apply admin permissions if it's turbo mode
-            if (mode == DoubleLifeMode.TURBO) {
+
+            activeSessions.put(playerId, sessionToRestore);
+
+            if (sessionToRestore.getMode() == DoubleLifeMode.TURBO) {
                 applyAdminMode(player);
             }
-            
-            // Restart timer and boss bar
-            startTimer(player, restoredSession);
-            createBossBar(player, mode);
-            
-            // Notify player
+
+            startTimer(player, sessionToRestore);
+            createBossBar(player, sessionToRestore.getMode());
+
             player.sendMessage(ComponentUtil.success(plugin.getLangConfig().getMessage("session.restored-after-restart", player)));
-            
-            plugin.getLogger().info("Restored " + mode.getDisplayName() + " session for " + player.getName());
-            
-            // Remove from pending sessions
+
+            plugin.getLogger().info("Restored " + sessionToRestore.getMode().getDisplayName() + " session for " + player.getName());
+
             pendingSessions.remove(sessionToRestore);
-            
+
         } catch (Exception e) {
             plugin.getLogger().warning("Failed to restore session for player " + player.getName() + ": " + e.getMessage());
             pendingSessions.remove(sessionToRestore);
@@ -352,12 +330,12 @@ public class SessionManager {
         plugin.getLuckPerms().getUserManager().saveUser(user);
     }
 
-    private void restorePlayerState(Player player, DoubleLifeSession session) {
+    private void restorePlayerState(Player player, SessionData session) {
         PlayerState state = session.getSavedState();
         state.restore(player);
     }
 
-    private void startTimer(Player player, DoubleLifeSession session) {
+    private void startTimer(Player player, SessionData session) {
         long maxDurationTicks = plugin.getPluginConfig().getMaxDuration() * 60L * 20L;
 
         BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
@@ -388,7 +366,7 @@ public class SessionManager {
         bossBars.put(player.getUniqueId(), bossBar);
     }
 
-    private void updateBossBar(Player player, DoubleLifeSession session) {
+    private void updateBossBar(Player player, SessionData session) {
         BossBar bossBar = bossBars.get(player.getUniqueId());
         if (bossBar == null) return;
 
@@ -423,7 +401,7 @@ public class SessionManager {
         return activeSessions.containsKey(player.getUniqueId());
     }
 
-    public DoubleLifeSession getSession(Player player) {
+    public SessionData getSession(Player player) {
         return activeSessions.get(player.getUniqueId());
     }
 
@@ -436,7 +414,7 @@ public class SessionManager {
     }
 
     public boolean prolongSession(Player player, int additionalMinutes) {
-        DoubleLifeSession session = activeSessions.get(player.getUniqueId());
+        SessionData session = activeSessions.get(player.getUniqueId());
         if (session == null) {
             return false;
         }
@@ -445,7 +423,6 @@ public class SessionManager {
         long currentTotalAllowed = session.getTotalAllowedMinutes(baseDuration);
         long newTotalAllowed = currentTotalAllowed + additionalMinutes;
 
-        // Safety limit: don't allow more than 2x the base duration
         if (newTotalAllowed > baseDuration * 2) {
             return false;
         }

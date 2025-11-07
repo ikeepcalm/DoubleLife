@@ -1,9 +1,8 @@
 package dev.ua.ikeepcalm.doublelife.util;
 
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeMode;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeSession;
-import dev.ua.ikeepcalm.doublelife.util.LogWriter;
+import dev.ua.ikeepcalm.doublelife.domain.model.source.DoubleLifeMode;
+import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import org.bukkit.Bukkit;
 
 import java.io.OutputStream;
@@ -19,7 +18,7 @@ public class WebhookUtil {
         this.plugin = plugin;
     }
 
-    public void sendLog(String playerName, String logContent, DoubleLifeSession session) {
+    public void sendLog(String playerName, String logContent, SessionData session) {
         if (plugin.getPluginConfig().isDiscordWebhookEnabled()) {
             sendDiscordWebhook(playerName, logContent, session);
         }
@@ -35,7 +34,7 @@ public class WebhookUtil {
         }
     }
 
-    private void sendDiscordWebhook(String playerName, String logContent, DoubleLifeSession session) {
+    private void sendDiscordWebhook(String playerName, String logContent, SessionData session) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 String webhookUrl = plugin.getPluginConfig().getDiscordWebhookUrl();
@@ -102,7 +101,7 @@ public class WebhookUtil {
         });
     }
 
-    private String formatForDiscord(String playerName, String logContent, String format, DoubleLifeSession session) {
+    private String formatForDiscord(String playerName, String logContent, String format, SessionData session) {
         LogWriter logWriter = new LogWriter(plugin, session);
         
         if (format.equalsIgnoreCase("markdown")) {
@@ -179,7 +178,7 @@ public class WebhookUtil {
         return content;
     }
 
-    private String formatSessionDuration(DoubleLifeSession session) {
+    private String formatSessionDuration(SessionData session) {
         long minutes = session.getDuration().toMinutes();
         long seconds = session.getDuration().getSeconds() % 60;
         return String.format("%dm %ds", minutes, seconds);

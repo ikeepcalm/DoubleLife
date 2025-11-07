@@ -10,7 +10,7 @@ import dev.ua.ikeepcalm.doublelife.listener.CommandInterceptor;
 import dev.ua.ikeepcalm.doublelife.listener.PlayerJoinListener;
 import dev.ua.ikeepcalm.doublelife.config.LangConfig;
 import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
-import dev.ua.ikeepcalm.doublelife.domain.model.SerializablePlayerState;
+import dev.ua.ikeepcalm.doublelife.domain.model.PlayerState;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import dev.ua.ikeepcalm.doublelife.util.WebhookUtil;
 import lombok.Getter;
@@ -36,7 +36,7 @@ public class DoubleLife extends JavaPlugin {
         
         // Register serializable classes for YAML
         ConfigurationSerialization.registerClass(SessionData.class);
-        ConfigurationSerialization.registerClass(SerializablePlayerState.class);
+        ConfigurationSerialization.registerClass(PlayerState.class);
 
         saveDefaultConfig();
         this.pluginConfig = new PluginConfig(this);

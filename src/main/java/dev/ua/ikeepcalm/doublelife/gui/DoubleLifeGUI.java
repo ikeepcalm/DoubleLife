@@ -4,8 +4,8 @@ import dev.triumphteam.gui.builder.item.PaperItemBuilder;
 import dev.triumphteam.gui.guis.Gui;
 import dev.triumphteam.gui.guis.GuiItem;
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeMode;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeSession;
+import dev.ua.ikeepcalm.doublelife.domain.model.source.DoubleLifeMode;
+import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import dev.ua.ikeepcalm.doublelife.util.ComponentUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
@@ -137,7 +137,7 @@ public class DoubleLifeGUI {
     }
     
     private GuiItem createStatusItem(Player player) {
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         Duration duration = session.getDuration();
         long remainingMinutes = plugin.getPluginConfig().getMaxDuration() - duration.toMinutes();
         
@@ -194,7 +194,7 @@ public class DoubleLifeGUI {
     }
     
     private GuiItem createLogPreviewItem(Player player) {
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         
         List<Component> lore = new ArrayList<>();
         lore.add(Component.empty());

@@ -1,10 +1,8 @@
 package dev.ua.ikeepcalm.doublelife.listener;
 
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeMode;
-import dev.ua.ikeepcalm.doublelife.domain.model.DoubleLifeSession;
+import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import dev.ua.ikeepcalm.doublelife.util.ComponentUtil;
-import net.luckperms.api.LuckPerms;
 import net.luckperms.api.model.user.User;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -34,7 +32,7 @@ public class CommandInterceptor implements Listener {
         
         String baseCommand = command.split(" ")[0];
         
-        DoubleLifeSession session = plugin.getSessionManager().getSession(player);
+        SessionData session = plugin.getSessionManager().getSession(player);
         
         if (session != null) {
             return;
