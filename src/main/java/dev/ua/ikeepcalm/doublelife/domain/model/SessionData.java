@@ -106,10 +106,8 @@ public class SessionData implements ConfigurationSerializable {
         map.put("extensionMinutes", extensionMinutes);
 
         if (savedState != null) {
-            map.put("savedState", savedState.serialize());
+            map.put("savedState", savedState);
         }
-
-        // Note: activities are not serialized as they're only needed for logging after session ends
 
         return map;
     }
@@ -129,10 +127,15 @@ public class SessionData implements ConfigurationSerializable {
             }
 
             PlayerState savedState = null;
-            @SuppressWarnings("unchecked")
-            Map<String, Object> stateMap = (Map<String, Object>) map.get("savedState");
-            if (stateMap != null) {
-                savedState = PlayerState.deserialize(stateMap);
+            Object stateObj = map.get("savedState");
+            if (stateObj != null) {
+                if (stateObj instanceof PlayerState) {
+                    savedState = (PlayerState) stateObj;
+                } else if (stateObj instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> stateMap = (Map<String, Object>) stateObj;
+                    savedState = PlayerState.deserialize(stateMap);
+                }
             }
 
             SessionData session = new SessionData(playerId, savedState, mode, startTime, extensionMinutes);

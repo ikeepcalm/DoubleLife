@@ -181,8 +181,12 @@ public class SessionManager {
             yaml.set("session", session);
             yaml.save(sessionFile);
 
+            plugin.getLogger().info("Saved session for " + playerName +
+                " with " + (session.getSavedState() != null ? "preserved" : "MISSING") + " player state");
+
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to save session YAML for " + playerName + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -220,14 +224,33 @@ public class SessionManager {
     private SessionData loadSessionFromYaml(File sessionFile) {
         try {
             YamlConfiguration yaml = YamlConfiguration.loadConfiguration(sessionFile);
-            SessionData session = (SessionData) yaml.get("session");
 
-            // Delete the file after loading to prevent re-loading
+            Object sessionObj = yaml.get("session");
+            SessionData session = null;
+
+            if (sessionObj instanceof SessionData) {
+                session = (SessionData) sessionObj;
+            } else if (sessionObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> sessionMap = (Map<String, Object>) sessionObj;
+                session = SessionData.deserialize(sessionMap);
+            }
+
+            if (session == null) {
+                plugin.getLogger().warning("Failed to deserialize session from " + sessionFile.getName());
+                sessionFile.delete();
+                return null;
+            }
+
+            plugin.getLogger().info("Successfully loaded session from " + sessionFile.getName() +
+                " with " + (session.getSavedState() != null ? "preserved" : "MISSING") + " player state");
+
             sessionFile.delete();
 
             return session;
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to load session YAML from " + sessionFile.getName() + ": " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }
@@ -332,7 +355,13 @@ public class SessionManager {
 
     private void restorePlayerState(Player player, SessionData session) {
         PlayerState state = session.getSavedState();
+        if (state == null) {
+            plugin.getLogger().warning("Cannot restore player state for " + player.getName() + " - saved state is null!");
+            return;
+        }
+        plugin.getLogger().info("Restoring player state for " + player.getName());
         state.restore(player);
+        plugin.getLogger().info("Successfully restored player state for " + player.getName());
     }
 
     private void startTimer(Player player, SessionData session) {
