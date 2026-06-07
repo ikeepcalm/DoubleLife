@@ -83,3 +83,54 @@ webhook:
     method: "POST"
     headers:
       Authorization: "Bearer YOUR_TOKEN_HERE"
+
+# AI Integration (Gemini)
+ai:
+  enabled: false
+  api-key: ""              # Google AI Studio API key — keep this secret!
+  model: "gemini-3.1-flash-lite"
+
+# Risk Scoring
+risk:
+  # Minimum level to trigger @here ping and AI summary: LOW, MEDIUM, HIGH
+  threshold: "MEDIUM"
+  weights:
+    creative-container: 5   # per container transfer/access while in creative
+    teleport-then-drop: 8   # teleport followed by item drop
+    item-drop-volume: 1     # per drop above the volume threshold
+    container-access: 1     # per access above the access threshold
+    block-break-velocity: 3 # high-velocity breaking burst
+    sensitive-command: 4    # each match of a sensitive-command pattern
+  velocity:
+    block-window-seconds: 5   # rolling window for velocity check
+    block-count: 30           # breaks within that window to trigger
+  teleport-drop-window-seconds: 15  # seconds after teleport to watch for drops
+  thresholds:
+    drop-volume: 5          # item drop count before flagging
+    container-access: 5     # container opens before flagging
+  # Patterns matched against the full command string (case-insensitive regex).
+  # A plain string like "/give" matches any command containing "/give".
+  # Use standard Java regex — e.g. "/co (restore|rollback)" for OR patterns.
+  sensitive-commands:
+    - "/give"
+    - "/tp "
+    - "gamemode creative"
+    - "gm c"
+    - "/co restore"
+    - "/co rollback"
+
+# Notification behaviour
+notifications:
+  # Whether to post a quiet (no-ping) Discord summary for clean sessions
+  clean-summary: true
+
+# Operator whitelist — only players listed here are allowed to hold operator status.
+# Any other online player found with op will be immediately de-opped with a warning.
+# Checked on join, quit, and every 20 ticks while online.
+op-whitelist:
+  enabled: false
+  allowed-ops: []
+  # Example:
+  # allowed-ops:
+  #   - "Notch"
+  #   - "Herobrine"

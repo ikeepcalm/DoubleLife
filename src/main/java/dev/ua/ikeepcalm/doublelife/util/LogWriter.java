@@ -49,8 +49,11 @@ public class LogWriter {
         } catch (IOException e) {
             plugin.getLogger().severe("Failed to write log: " + e.getMessage());
         }
+    }
 
-        plugin.getWebhookUtil().sendLog(playerName, logContent, session);
+    /** Public accessor used by WebhookUtil when building callback payloads. */
+    public String formatLog(SessionData ignored) {
+        return formatLog();
     }
 
     private String formatLog() {

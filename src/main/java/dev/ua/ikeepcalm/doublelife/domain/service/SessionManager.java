@@ -5,7 +5,6 @@ import dev.ua.ikeepcalm.doublelife.domain.model.source.DoubleLifeMode;
 import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import dev.ua.ikeepcalm.doublelife.domain.model.PlayerState;
 import dev.ua.ikeepcalm.doublelife.util.ComponentUtil;
-import dev.ua.ikeepcalm.doublelife.util.LogWriter;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.luckperms.api.model.data.DataMutateResult;
@@ -125,8 +124,7 @@ public class SessionManager {
             player.hideBossBar(bossBar);
         }
 
-        LogWriter logWriter = new LogWriter(plugin, session);
-        logWriter.writeLog();
+        plugin.getSessionReporter().report(session, player.getName());
 
         long cooldownDuration = plugin.getPluginConfig().getCooldownDuration() * 1000L;
         cooldowns.put(player.getUniqueId(), System.currentTimeMillis() + cooldownDuration);

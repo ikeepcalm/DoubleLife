@@ -1,6 +1,7 @@
 package dev.ua.ikeepcalm.doublelife.util;
 
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
+import dev.ua.ikeepcalm.doublelife.domain.model.RiskAssessment;
 import dev.ua.ikeepcalm.doublelife.domain.model.source.DoubleLifeMode;
 import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import org.bukkit.Bukkit;
@@ -182,6 +183,121 @@ public class WebhookUtil {
         long minutes = session.getDuration().toMinutes();
         long seconds = session.getDuration().getSeconds() % 60;
         return String.format("%dm %ds", minutes, seconds);
+    }
+
+    /**
+     * Posts a high-priority flagged-session alert.  Called from an already-async task.
+     */
+    public void sendFlaggedAlert(String playerName, SessionData session, RiskAssessment assessment, String aiVerdict) {
+        if (!plugin.getPluginConfig().isDiscordWebhookEnabled()) return;
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                String webhookUrl = plugin.getPluginConfig().getDiscordWebhookUrl();
+                if (webhookUrl.isEmpty()) return;
+
+                LogWriter logWriter = new LogWriter(plugin, session);
+                String detailBlock = escapeJson(logWriter.formatLogForDiscord(1400));
+
+                String mention = plugin.getPluginConfig().isDiscordTurboMention() ? "@here " : "";
+                String levelEmoji = assessment.getLevel().getEmoji();
+                int color = assessment.getLevel().getDiscordColor();
+
+                String flagsSection = escapeJson(assessment.formatFlags());
+                String verdictLine = escapeJson(aiVerdict);
+
+                String description = "**AI Verdict:** " + verdictLine + "\\n\\n"
+                        + "**Risk Score:** " + assessment.getScore()
+                        + " (" + assessment.getLevel().getDisplayName() + ")\\n\\n"
+                        + "**Flags:**\\n" + flagsSection + "\\n\\n"
+                        + detailBlock;
+
+                String payload = "{"
+                        + "\"content\": \"" + mention + levelEmoji + " **Suspicious session detected**\","
+                        + "\"embeds\": [{"
+                        + "\"title\": \"" + levelEmoji + " " + escapeJson(session.getMode().getDisplayName())
+                        + " Session — " + escapeJson(playerName) + "\","
+                        + "\"description\": \"" + description + "\","
+                        + "\"color\": " + color + ","
+                        + "\"timestamp\": \"" + session.getEndTime().toString() + "\","
+                        + "\"footer\": {\"text\": \"Activities: " + session.getActivities().size()
+                        + " | Duration: " + formatSessionDuration(session) + "\"}"
+                        + "}]"
+                        + "}";
+
+                postWebhook(webhookUrl, payload, "flagged alert");
+                sendCallbackIfEnabled(playerName, logWriter.formatLog(session));
+            } catch (Exception e) {
+                plugin.getLogger().severe("Error sending flagged alert: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Posts a quiet one-line summary for a clean (below-threshold) session.
+     * Called from an already-async task.  No mention, green colour.
+     */
+    public void sendCleanSummary(String playerName, SessionData session, RiskAssessment assessment) {
+        if (!plugin.getPluginConfig().isDiscordWebhookEnabled()) return;
+        if (!plugin.getPluginConfig().isCleanSummaryEnabled()) return;
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                String webhookUrl = plugin.getPluginConfig().getDiscordWebhookUrl();
+                if (webhookUrl.isEmpty()) return;
+
+                String modeEmoji = session.getMode() == DoubleLifeMode.TURBO ? "🚀" : "⚡";
+                String description = "Session ended with no suspicious activity detected. "
+                        + "Score: " + assessment.getScore()
+                        + " | Activities: " + session.getActivities().size()
+                        + " | Duration: " + formatSessionDuration(session);
+
+                String payload = "{"
+                        + "\"embeds\": [{"
+                        + "\"title\": \"" + modeEmoji + " " + escapeJson(session.getMode().getDisplayName())
+                        + " Session — " + escapeJson(playerName) + "\","
+                        + "\"description\": \"" + escapeJson(description) + "\","
+                        + "\"color\": 4568217,"  // muted green #45B7D9
+                        + "\"timestamp\": \"" + session.getEndTime().toString() + "\","
+                        + "\"footer\": {\"text\": \"Risk: LOW\"}"
+                        + "}]"
+                        + "}";
+
+                postWebhook(webhookUrl, payload, "clean summary");
+
+                LogWriter logWriter = new LogWriter(plugin, session);
+                sendCallbackIfEnabled(playerName, logWriter.formatLog(session));
+            } catch (Exception e) {
+                plugin.getLogger().severe("Error sending clean summary: " + e.getMessage());
+            }
+        });
+    }
+
+    private void postWebhook(String webhookUrl, String payload, String label) {
+        try {
+            URL url = new URL(webhookUrl);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            int code = conn.getResponseCode();
+            if (code == 204) {
+                plugin.getLogger().info("Discord webhook (" + label + ") sent successfully");
+            } else {
+                plugin.getLogger().warning("Discord webhook (" + label + ") failed: " + code);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error posting webhook (" + label + "): " + e.getMessage());
+        }
+    }
+
+    private void sendCallbackIfEnabled(String playerName, String logContent) {
+        if (plugin.getPluginConfig().isCallbackEnabled()) {
+            sendHttpCallback(playerName, logContent);
+        }
     }
 
     private void sendTurboActivationWebhook(String playerName) {

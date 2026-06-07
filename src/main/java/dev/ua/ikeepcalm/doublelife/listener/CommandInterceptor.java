@@ -24,20 +24,35 @@ public class CommandInterceptor implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onCommandPreprocess(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
-        String command = event.getMessage().toLowerCase();
-        
+        String raw = event.getMessage();
+        String command = raw.toLowerCase();
+
         if (command.startsWith("/")) {
             command = command.substring(1);
         }
-        
-        String baseCommand = command.split(" ")[0];
-        
+
+        String[] parts = command.split(" ", 2);
+        String baseCommand = parts[0];
+
+        // Block /op targeting non-whitelisted players
+        if (baseCommand.equals("op") && parts.length == 2) {
+            String target = parts[1].trim();
+            if (plugin.getOpGuardService().shouldBlockOpCommand(target)) {
+                event.setCancelled(true);
+                player.sendMessage(ComponentUtil.error(
+                        "Cannot op '" + target + "' — they are not on the DoubleLife op-whitelist."));
+                plugin.getLogger().warning("[DoubleLife] " + player.getName()
+                        + " attempted to op non-whitelisted player: " + target);
+                return;
+            }
+        }
+
         SessionData session = plugin.getSessionManager().getSession(player);
-        
+
         if (session != null) {
             return;
         }
-        
+
         if (isRestrictedCommand(player, baseCommand)) {
             event.setCancelled(true);
             player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("command.restricted", player)));

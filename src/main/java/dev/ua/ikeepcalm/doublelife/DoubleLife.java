@@ -11,7 +11,11 @@ import dev.ua.ikeepcalm.doublelife.listener.PlayerJoinListener;
 import dev.ua.ikeepcalm.doublelife.config.LangConfig;
 import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import dev.ua.ikeepcalm.doublelife.domain.model.PlayerState;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
+import dev.ua.ikeepcalm.doublelife.domain.service.OpGuardService;
+import dev.ua.ikeepcalm.doublelife.util.GeminiClient;
+import dev.ua.ikeepcalm.doublelife.util.SessionReporter;
 import dev.ua.ikeepcalm.doublelife.util.WebhookUtil;
 import lombok.Getter;
 import net.luckperms.api.LuckPerms;
@@ -28,7 +32,10 @@ public class DoubleLife extends JavaPlugin {
     private SessionManager sessionManager;
     private LuckPerms luckPerms;
     private WebhookUtil webhookUtil;
-    private LiteCommands<org.bukkit.command.CommandSender> liteCommands;
+    private GeminiClient geminiClient;
+    private SessionReporter sessionReporter;
+    private OpGuardService opGuardService;
+    private LiteCommands<CommandSender> liteCommands;
 
     @Override
     public void onEnable() {
@@ -50,9 +57,16 @@ public class DoubleLife extends JavaPlugin {
 
         this.sessionManager = new SessionManager(this);
         this.webhookUtil = new WebhookUtil(this);
+        this.geminiClient = new GeminiClient(this);
+        this.sessionReporter = new SessionReporter(this);
+        this.opGuardService = new OpGuardService(this);
 
         registerCommands();
         registerListeners();
+
+        // Sweep for unauthorised operators every 20 ticks
+        getServer().getScheduler().runTaskTimer(this,
+                () -> opGuardService.checkAllOnlinePlayers(), 20L, 20L);
 
         getLogger().info(langConfig.getMessage("console.plugin-enabled"));
     }
