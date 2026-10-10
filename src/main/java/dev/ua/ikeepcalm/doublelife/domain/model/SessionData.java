@@ -23,6 +23,8 @@ import java.util.UUID;
 @Getter
 public class SessionData implements ConfigurationSerializable {
 
+    /** Stable id for this session; correlates every audit row and survives restarts. */
+    private final UUID sessionId;
     private final UUID playerId;
     private final PlayerState savedState;
     private Instant startTime;
@@ -32,6 +34,7 @@ public class SessionData implements ConfigurationSerializable {
     private long extensionMinutes = 0;
 
     public SessionData(UUID playerId, PlayerState savedState, DoubleLifeMode mode) {
+        this.sessionId = UUID.randomUUID();
         this.playerId = playerId;
         this.savedState = savedState;
         this.mode = mode;
@@ -40,6 +43,7 @@ public class SessionData implements ConfigurationSerializable {
     }
 
     public SessionData(UUID playerId, PlayerState savedState, DoubleLifeMode mode, LocalDateTime startTime) {
+        this.sessionId = UUID.randomUUID();
         this.playerId = playerId;
         this.savedState = savedState;
         this.mode = mode;
@@ -48,6 +52,12 @@ public class SessionData implements ConfigurationSerializable {
     }
 
     public SessionData(UUID playerId, PlayerState savedState, DoubleLifeMode mode, LocalDateTime startTime, long extensionMinutes) {
+        this(UUID.randomUUID(), playerId, savedState, mode, startTime, extensionMinutes);
+    }
+
+    public SessionData(UUID sessionId, UUID playerId, PlayerState savedState, DoubleLifeMode mode,
+                       LocalDateTime startTime, long extensionMinutes) {
+        this.sessionId = sessionId;
         this.playerId = playerId;
         this.savedState = savedState;
         this.mode = mode;
@@ -96,6 +106,7 @@ public class SessionData implements ConfigurationSerializable {
     public Map<String, Object> serialize() {
         Map<String, Object> map = new HashMap<>();
 
+        map.put("sessionId", sessionId.toString());
         map.put("playerId", playerId.toString());
         map.put("startTime", getStartTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
         if (endTime != null) {
@@ -108,6 +119,8 @@ public class SessionData implements ConfigurationSerializable {
         if (savedState != null) {
             map.put("savedState", savedState);
         }
+
+        map.put("activities", serializeActivities());
 
         return map;
     }
@@ -138,7 +151,11 @@ public class SessionData implements ConfigurationSerializable {
                 }
             }
 
-            SessionData session = new SessionData(playerId, savedState, mode, startTime, extensionMinutes);
+            Object sessionIdObj = map.get("sessionId");
+            UUID sessionId = sessionIdObj instanceof String text ? UUID.fromString(text) : UUID.randomUUID();
+
+            SessionData session = new SessionData(sessionId, playerId, savedState, mode, startTime, extensionMinutes);
+            session.activities.addAll(deserializeActivities(map.get("activities")));
 
             // Restore endTime if present (though typically only active sessions are saved)
             String endTimeStr = (String) map.get("endTime");
@@ -151,5 +168,38 @@ public class SessionData implements ConfigurationSerializable {
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to deserialize DoubleLifeSession", e);
         }
+    }
+
+    private List<Map<String, Object>> serializeActivities() {
+        List<Map<String, Object>> serialized = new ArrayList<>();
+        for (ActivityLog activity : activities) {
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("timestamp", activity.getTimestamp().toString());
+            entry.put("type", activity.getType().name());
+            entry.put("details", activity.getDetails());
+            entry.put("location", activity.getLocation());
+            serialized.add(entry);
+        }
+        return serialized;
+    }
+
+    private static List<ActivityLog> deserializeActivities(Object raw) {
+        List<ActivityLog> restored = new ArrayList<>();
+        if (!(raw instanceof List<?> entries)) {
+            return restored;
+        }
+        for (Object entry : entries) {
+            if (!(entry instanceof Map<?, ?> values)) continue;
+            try {
+                restored.add(new ActivityLog(
+                        Instant.parse(String.valueOf(values.get("timestamp"))),
+                        ActivityType.valueOf(String.valueOf(values.get("type"))),
+                        values.get("details") == null ? "" : String.valueOf(values.get("details")),
+                        values.get("location") == null ? "Unknown" : String.valueOf(values.get("location"))));
+            } catch (RuntimeException malformed) {
+                // Skip an entry that cannot be read so the session still loads
+            }
+        }
+        return restored;
     }
 }

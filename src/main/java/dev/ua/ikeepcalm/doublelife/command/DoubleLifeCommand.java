@@ -7,6 +7,7 @@ import dev.rollczi.litecommands.annotations.execute.Execute;
 import dev.rollczi.litecommands.annotations.optional.OptionalArg;
 import dev.rollczi.litecommands.annotations.permission.Permission;
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
+import dev.ua.ikeepcalm.doublelife.config.PluginConfig;
 import dev.ua.ikeepcalm.doublelife.domain.model.source.DoubleLifeMode;
 import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import dev.ua.ikeepcalm.doublelife.gui.DoubleLifeGUI;
@@ -155,7 +156,14 @@ public class DoubleLifeCommand {
     @Execute(name = "reload")
     @Permission("doublelife.admin")
     public void reload(@Context CommandSender sender) {
-        plugin.reload();
+        PluginConfig before = plugin.getPluginConfig();
+        try {
+            plugin.reload();
+        } catch (RuntimeException e) {
+            plugin.getSessionAuditor().configReloadFailed(sender, before, e);
+            throw e;
+        }
+        plugin.getSessionAuditor().configReloaded(sender, before, plugin.getPluginConfig());
         String message = (sender instanceof Player) ? 
             plugin.getLangConfig().getMessage("messages.reload-success", (Player) sender) : 
             plugin.getLangConfig().getMessage("messages.reload-success");

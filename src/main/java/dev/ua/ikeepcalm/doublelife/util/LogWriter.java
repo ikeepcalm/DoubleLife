@@ -70,11 +70,15 @@ public class LogWriter {
         log.append("```\n");
 
         log.append("# SAVED STATE \n```");
-        log.append("Location: ").append(formatLocation(session.getSavedState().getLocation())).append("\n");
-        log.append("GameMode: ").append(session.getSavedState().getGameMode()).append("\n");
-        log.append("Level: ").append(session.getSavedState().getLevel()).append("\n");
-        log.append("Health: ").append(session.getSavedState().getHealth()).append("\n");
-        log.append("Food Level: ").append(session.getSavedState().getFoodLevel()).append("\n");
+        if (session.getSavedState() == null) {
+            log.append("Unavailable\n");
+        } else {
+            log.append("Location: ").append(formatLocation(session.getSavedState().getLocation())).append("\n");
+            log.append("GameMode: ").append(session.getSavedState().getGameMode()).append("\n");
+            log.append("Level: ").append(session.getSavedState().getLevel()).append("\n");
+            log.append("Health: ").append(session.getSavedState().getHealth()).append("\n");
+            log.append("Food Level: ").append(session.getSavedState().getFoodLevel()).append("\n");
+        }
         log.append("```\n");
 
         log.append("# ACTIVITY LOG \n```");

@@ -2,8 +2,9 @@ package dev.ua.ikeepcalm.doublelife.listener;
 
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
 import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
+import dev.ua.ikeepcalm.doublelife.util.CommandNames;
 import dev.ua.ikeepcalm.doublelife.util.ComponentUtil;
-import net.luckperms.api.model.user.User;
+import dev.ua.ikeepcalm.doublelife.util.StaffGroups;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -25,24 +26,20 @@ public class CommandInterceptor implements Listener {
     public void onCommandPreprocess(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
         String raw = event.getMessage();
-        String command = raw.toLowerCase();
-
-        if (command.startsWith("/")) {
-            command = command.substring(1);
-        }
-
-        String[] parts = command.split(" ", 2);
-        String baseCommand = parts[0];
+        // Namespace prefixes (minecraft:tp) and aliases resolve to the same names as the plain label.
+        CommandNames.Parsed command = CommandNames.parse(raw);
+        plugin.getActivityAuditor().noteParsed(raw, command);
 
         // Block /op targeting non-whitelisted players
-        if (baseCommand.equals("op") && parts.length == 2) {
-            String target = parts[1].trim();
+        if (command.is("op") && command.firstArg() != null) {
+            String target = command.firstArg();
             if (plugin.getOpGuardService().shouldBlockOpCommand(target)) {
                 event.setCancelled(true);
                 player.sendMessage(ComponentUtil.error(
                         "Cannot op '" + target + "' — they are not on the DoubleLife op-whitelist."));
                 plugin.getLogger().warning("[DoubleLife] " + player.getName()
                         + " attempted to op non-whitelisted player: " + target);
+                plugin.getSessionAuditor().opBlocked(player, target, raw);
                 return;
             }
         }
@@ -53,30 +50,22 @@ public class CommandInterceptor implements Listener {
             return;
         }
 
-        if (isRestrictedCommand(player, baseCommand)) {
+        String group = restrictingGroup(player, command);
+        if (group != null) {
             event.setCancelled(true);
             player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("command.restricted", player)));
             player.sendMessage(ComponentUtil.warning(plugin.getLangConfig().getMessage("command.doublelife-required", player)));
+            plugin.getSessionAuditor().restrictedCommandBlocked(player, command, raw, group);
         }
     }
     
-    private boolean isRestrictedCommand(Player player, String command) {
+    private String restrictingGroup(Player player, CommandNames.Parsed command) {
         Map<String, List<String>> groupCommands = plugin.getPluginConfig().getGroupCommands();
-        
-        User user = plugin.getLuckPerms().getUserManager().getUser(player.getUniqueId());
-        if (user == null) {
-            return false;
-        }
-        
-        for (String group : groupCommands.keySet()) {
-            if (user.getInheritedGroups(user.getQueryOptions()).contains(plugin.getLuckPerms().getGroupManager().getGroup(group))) {
-                List<String> restrictedCommands = groupCommands.get(group);
-                if (restrictedCommands.contains(command)) {
-                    return true;
-                }
+        for (String group : StaffGroups.of(plugin, player)) {
+            if (command.matchesAny(groupCommands.get(group))) {
+                return group;
             }
         }
-        
-        return false;
+        return null;
     }
 }

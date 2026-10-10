@@ -1,6 +1,7 @@
 package dev.ua.ikeepcalm.doublelife.domain.service;
 
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
+import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import dev.ua.ikeepcalm.doublelife.util.ComponentUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -42,6 +43,8 @@ public class OpGuardService {
         if (isAllowed(player.getName())) return;
 
         player.setOp(false);
+        SessionData session = plugin.getSessionManager().getSession(player);
+        plugin.getSessionAuditor().opRevoked(player, "whitelist", true, session == null ? null : session.getSessionId());
 
         player.sendMessage(ComponentUtil.error(
                 "Your operator status has been revoked by DoubleLife's op-whitelist. " +

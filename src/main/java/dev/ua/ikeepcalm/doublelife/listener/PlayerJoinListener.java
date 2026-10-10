@@ -22,9 +22,18 @@ public class PlayerJoinListener implements Listener {
 
         // Check op whitelist on join (delayed so the player object is fully initialised)
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (!player.isOnline()) {
+                return;
+            }
             plugin.getOpGuardService().checkAndDeop(player);
             plugin.getSessionManager().restoreSessionForPlayer(player);
         }, 20L);
+    }
+
+    // LOWEST: ends the session before the server saves the player and before other plugins read the inventory
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerQuitDuringSession(PlayerQuitEvent event) {
+        plugin.getSessionManager().handleQuit(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

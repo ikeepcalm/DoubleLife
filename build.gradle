@@ -8,6 +8,7 @@ group = 'dev.ua.ikeepcalm'
 version = '1.1.0'
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven { url "https://repo.panda-lang.org/releases" }
     maven { url "https://repo.triumphteam.dev/snapshots/"}
@@ -28,12 +29,14 @@ dependencies {
     implementation("dev.triumphteam:triumph-gui-paper:3.1.13")
     implementation "dev.rollczi:litecommands-bukkit:3.10.9"
     implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'dev.ua.ikeepcalm.mysterria:audit-client:1.0.2'
     compileOnly("io.papermc.paper:paper-api:26.1.1.build.+")
 }
 
 shadowJar {
     relocate("dev.triumphteam.gui", "dev.ua.ikeepcalm.doublelife.triumphgui")
     relocate("com.google.gson", "dev.ua.ikeepcalm.doublelife.gson")
+    relocate("dev.ua.ikeepcalm.mysterria.audit", "dev.ua.ikeepcalm.doublelife.libs.audit")
 }
 
 tasks {

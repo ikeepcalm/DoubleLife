@@ -84,7 +84,7 @@ public class DoubleLifeGUI {
             p.closeInventory();
 
             if (plugin.getSessionManager().canStartSession(p, mode)) {
-                plugin.getSessionManager().startSession(p, mode);
+                plugin.getSessionManager().startSession(p, mode, "gui");
             } else {
                 p.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.cannot-start", p)));
             }
@@ -110,7 +110,7 @@ public class DoubleLifeGUI {
             p.closeInventory();
             
             if (plugin.getSessionManager().canStartSession(p)) {
-                plugin.getSessionManager().startSession(p);
+                plugin.getSessionManager().startSession(p, DoubleLifeMode.DEFAULT, "gui");
             } else {
                 p.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("session.cannot-start", p)));
             }
@@ -132,7 +132,7 @@ public class DoubleLifeGUI {
         return PaperItemBuilder.from(item).asGuiItem(event -> {
             Player p = (Player) event.getWhoClicked();
             p.closeInventory();
-            plugin.getSessionManager().endSession(p);
+            plugin.getSessionManager().endSession(p, "gui");
         });
     }
     
