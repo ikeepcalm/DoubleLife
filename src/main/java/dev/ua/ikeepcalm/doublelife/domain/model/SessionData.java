@@ -109,6 +109,8 @@ public class SessionData implements ConfigurationSerializable {
             map.put("savedState", savedState);
         }
 
+        map.put("activities", serializeActivities());
+
         return map;
     }
 
@@ -139,6 +141,7 @@ public class SessionData implements ConfigurationSerializable {
             }
 
             SessionData session = new SessionData(playerId, savedState, mode, startTime, extensionMinutes);
+            session.activities.addAll(deserializeActivities(map.get("activities")));
 
             // Restore endTime if present (though typically only active sessions are saved)
             String endTimeStr = (String) map.get("endTime");
@@ -151,5 +154,38 @@ public class SessionData implements ConfigurationSerializable {
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to deserialize DoubleLifeSession", e);
         }
+    }
+
+    private List<Map<String, Object>> serializeActivities() {
+        List<Map<String, Object>> serialized = new ArrayList<>();
+        for (ActivityLog activity : activities) {
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("timestamp", activity.getTimestamp().toString());
+            entry.put("type", activity.getType().name());
+            entry.put("details", activity.getDetails());
+            entry.put("location", activity.getLocation());
+            serialized.add(entry);
+        }
+        return serialized;
+    }
+
+    private static List<ActivityLog> deserializeActivities(Object raw) {
+        List<ActivityLog> restored = new ArrayList<>();
+        if (!(raw instanceof List<?> entries)) {
+            return restored;
+        }
+        for (Object entry : entries) {
+            if (!(entry instanceof Map<?, ?> values)) continue;
+            try {
+                restored.add(new ActivityLog(
+                        Instant.parse(String.valueOf(values.get("timestamp"))),
+                        ActivityType.valueOf(String.valueOf(values.get("type"))),
+                        values.get("details") == null ? "" : String.valueOf(values.get("details")),
+                        values.get("location") == null ? "Unknown" : String.valueOf(values.get("location"))));
+            } catch (RuntimeException malformed) {
+                // Skip an entry that cannot be read so the session still loads
+            }
+        }
+        return restored;
     }
 }

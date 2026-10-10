@@ -26,8 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ActivityListener implements Listener {
     
     private final DoubleLife plugin;
-    private final Map<UUID, List<Block>> blockBatch = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> lastBatchTime = new ConcurrentHashMap<>();
+    private final Map<BlockBatchKey, List<BlockEntry>> blockBatch = new ConcurrentHashMap<>();
+    private final Map<BlockBatchKey, Long> lastBatchTime = new ConcurrentHashMap<>();
     private static final long BATCH_INTERVAL = 1000;
     
     public ActivityListener(DoubleLife plugin) {
@@ -146,41 +146,57 @@ public class ActivityListener implements Listener {
     }
     
     private void addBlockToBatch(Player player, Block block, boolean isPlace) {
-        UUID playerId = player.getUniqueId();
-        List<Block> batch = blockBatch.computeIfAbsent(playerId, k -> new ArrayList<>());
-        batch.add(block);
+        BlockBatchKey key = new BlockBatchKey(player.getUniqueId(), isPlace);
+        List<BlockEntry> batch = blockBatch.computeIfAbsent(key, k -> new ArrayList<>());
+        batch.add(new BlockEntry(block.getType(), block.getLocation()));
         
-        Long lastBatch = lastBatchTime.get(playerId);
+        Long lastBatch = lastBatchTime.get(key);
         long now = System.currentTimeMillis();
         
         if (lastBatch == null || now - lastBatch >= BATCH_INTERVAL || batch.size() >= 10) {
-            processBatch(player, new ArrayList<>(batch), isPlace);
+            SessionData session = plugin.getSessionManager().getSession(player);
+            if (session != null) {
+                logBatch(session, batch, isPlace);
+            }
             batch.clear();
-            lastBatchTime.put(playerId, now);
+            lastBatchTime.put(key, now);
         }
     }
-    
-    private void processBatch(Player player, List<Block> blocks, boolean isPlace) {
-        SessionData session = plugin.getSessionManager().getSession(player);
-        if (session == null) return;
-        
-        Map<Material, Integer> counts = new HashMap<>();
-        Location firstLoc = null;
-        
-        for (Block block : blocks) {
-            counts.merge(block.getType(), 1, Integer::sum);
-            if (firstLoc == null) firstLoc = block.getLocation();
+
+    // Called when the session ends, before the report is built
+    public void flushBlocks(UUID playerId, SessionData session) {
+        for (boolean isPlace : new boolean[]{true, false}) {
+            BlockBatchKey key = new BlockBatchKey(playerId, isPlace);
+            List<BlockEntry> batch = blockBatch.remove(key);
+            lastBatchTime.remove(key);
+            if (batch != null && !batch.isEmpty()) {
+                logBatch(session, batch, isPlace);
+            }
         }
-        
+    }
+
+    private void logBatch(SessionData session, List<BlockEntry> blocks, boolean isPlace) {
+        Map<Material, Integer> counts = new LinkedHashMap<>();
+        for (BlockEntry block : blocks) {
+            counts.merge(block.material(), 1, Integer::sum);
+        }
+
         StringBuilder details = new StringBuilder();
         counts.forEach((mat, count) -> {
             if (!details.isEmpty()) details.append(", ");
             details.append(mat.name()).append(" x").append(count);
         });
-        
-        String location = formatLocation(firstLoc);
+
+        String location = formatLocation(blocks.get(0).location());
         ActivityType type = isPlace ? ActivityType.BLOCK_PLACE : ActivityType.BLOCK_BREAK;
         session.logActivity(type, details.toString(), location);
+    }
+
+    private record BlockBatchKey(UUID playerId, boolean place) {
+    }
+
+    // Captured at event time; the block already shows its new state later
+    private record BlockEntry(Material material, Location location) {
     }
     
     private String formatLocation(Location loc) {

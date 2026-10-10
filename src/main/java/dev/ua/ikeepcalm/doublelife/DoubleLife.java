@@ -36,6 +36,7 @@ public class DoubleLife extends JavaPlugin {
     private SessionReporter sessionReporter;
     private OpGuardService opGuardService;
     private LiteCommands<CommandSender> liteCommands;
+    private ActivityListener activityListener;
 
     @Override
     public void onEnable() {
@@ -75,8 +76,8 @@ public class DoubleLife extends JavaPlugin {
     public void onDisable() {
         if (sessionManager != null) {
             try {
-                sessionManager.saveSessionsOnShutdown();
-                sessionManager.endAllSessions();
+                // Ends every session synchronously, then saves only sessions that could not be restored.
+                sessionManager.shutdown();
             } catch (Exception e) {
                 getLogger().severe("Error during session cleanup: " + e.getMessage());
             }
@@ -113,7 +114,7 @@ public class DoubleLife extends JavaPlugin {
     }
 
     private void registerListeners() {
-        getServer().getPluginManager().registerEvents(new ActivityListener(this), this);
+        getServer().getPluginManager().registerEvents(activityListener = new ActivityListener(this), this);
         getServer().getPluginManager().registerEvents(new CommandInterceptor(this), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
     }
