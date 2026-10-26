@@ -31,8 +31,10 @@ public class CommandInterceptor implements Listener {
             command = command.substring(1);
         }
 
-        String[] parts = command.split(" ", 2);
-        String baseCommand = parts[0];
+        String[] parts = command.trim().split("\\s+", 2);
+        // strip "namespace:" so /coreprotect:co can't bypass the restriction list
+        String baseCommand = parts[0].substring(parts[0].indexOf(':') + 1);
+        String normalized = parts.length == 2 ? baseCommand + " " + parts[1] : baseCommand;
 
         // Block /op targeting non-whitelisted players
         if (baseCommand.equals("op") && parts.length == 2) {
@@ -53,7 +55,7 @@ public class CommandInterceptor implements Listener {
             return;
         }
 
-        if (isRestrictedCommand(player, baseCommand)) {
+        if (isRestrictedCommand(player, normalized)) {
             event.setCancelled(true);
             player.sendMessage(ComponentUtil.error(plugin.getLangConfig().getMessage("command.restricted", player)));
             player.sendMessage(ComponentUtil.warning(plugin.getLangConfig().getMessage("command.doublelife-required", player)));
@@ -61,6 +63,9 @@ public class CommandInterceptor implements Listener {
     }
     
     private boolean isRestrictedCommand(Player player, String command) {
+        if (plugin.getPluginConfig().getAlwaysAllowedCommands().stream().anyMatch(entry -> matches(command, entry))) {
+            return false;
+        }
         Map<String, List<String>> groupCommands = plugin.getPluginConfig().getGroupCommands();
         
         User user = plugin.getLuckPerms().getUserManager().getUser(player.getUniqueId());
@@ -71,12 +76,16 @@ public class CommandInterceptor implements Listener {
         for (String group : groupCommands.keySet()) {
             if (user.getInheritedGroups(user.getQueryOptions()).contains(plugin.getLuckPerms().getGroupManager().getGroup(group))) {
                 List<String> restrictedCommands = groupCommands.get(group);
-                if (restrictedCommands.contains(command)) {
+                if (restrictedCommands.stream().anyMatch(entry -> matches(command, entry))) {
                     return true;
                 }
             }
         }
         
         return false;
+    }
+
+    static boolean matches(String command, String entry) {
+        return command.equals(entry) || command.startsWith(entry + " ");
     }
 }

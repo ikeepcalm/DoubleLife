@@ -1,7 +1,7 @@
 name: DoubleLife
-version: 1.0.0
+version: ${version}
 main: dev.ua.ikeepcalm.doublelife.DoubleLife
-api-version: "1.21"
+api-version: '26.3'
 authors: [ikeepcalm]
 description: Limited admin mode plugin with comprehensive activity logging
 
@@ -23,4 +23,10 @@ permissions:
     default: op
   doublelife.admin:
     description: Access to reload and administrative functions
+    default: op
+  doublelife.prolong:
+    description: Extend an active Double Life session
+    default: op
+  doublelife.history:
+    description: Browse recorded Double Life sessions in-game
     default: op

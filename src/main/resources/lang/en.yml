@@ -9,6 +9,16 @@ messages:
 
 # Session Messages
 session:
+  backup-failed: "Could not back up your inventory, so the session was not started. Tell a developer."
+  reason-hint: "Tip: add a reason next time, e.g. /dl start ticket #123"
+  reason-required: "Please say why you are starting Double Life (ticket number, player name, task)."
+  ending-soon: "Your Double Life session ends in 1 minute. Use /dl extend <minutes> if you need more time."
+  recovered: "Your last Double Life session was interrupted. Your inventory and position have been restored."
+  note-added: "Note added to your session log."
+  extend-invalid: "Minutes must be a positive number."
+  extend-limit: "Cannot extend: sessions can be extended by at most {0} minutes in total."
+  force-ended: "Ended {0}'s Double Life session."
+  force-ended-target: "Your Double Life session was ended by {0}."
   start-success: "Double Life session started! You now have temporary admin permissions."
   default-start-success: "Default Double Life session started! Command monitoring active."
   turbo-start-success: "Turbo Double Life session started! Full admin permissions granted."
@@ -21,10 +31,6 @@ session:
   on-cooldown: "You must wait {0} seconds before starting another session."
   cannot-start: "You cannot start a Double Life session right now."
   turbo-permission-required: "You don't have permission to use Turbo mode. Contact an administrator to get the 'doublelife.turbo' permission."
-  restored-after-restart: "Your Double Life session has been restored after server restart."
-  default-restored: "Default Double Life session restored after server restart."
-  turbo-restored: "Turbo Double Life session restored after server restart."
-  expired-during-restart: "Your Double Life session expired while the server was offline."
   extended-success: "Session extended by {0} minutes successfully!"
   
 # Permission Messages  
@@ -45,14 +51,20 @@ status:
 
 # GUI Messages
 gui:
+  click-to-start: "Click to start (you'll be asked for a reason)"
+  extend-button: "Extend by {0} minutes"
+  extend-button-lore:
+    - "Add more time to this session"
+    - "Extension left: {0} minutes"
+  reason: "Reason: {0}"
+  note-hint: "Add context with /dl note <text>"
+  sessions-title: "Active sessions ({0})"
+  history-button: "Session History"
+  history-button-lore:
+    - "Browse recorded staff sessions:"
+    - "reasons, risk, AI verdicts"
+    - "and full timelines"
   title: "⚡ Double Life Menu"
-  start-button: "Start Admin Mode"
-  start-button-lore:
-    - "Click to begin your temporary"
-    - "admin session with full permissions"
-    - ""
-    - "Duration: {0} minutes"
-    - "Cooldown: {1} minutes"
   
   default-button: "Default Mode"
   default-button-lore:
@@ -106,8 +118,8 @@ gui:
   info-title: "Information"
   cooldown-title: "On Cooldown"
   cooldown-wait: "Please wait: {0}"
-  time-elapsed: "Time elapsed: {0} minutes"
-  time-remaining: "Time remaining: {0} minutes"
+  time-elapsed: "Time elapsed: {0}"
+  time-remaining: "Time remaining: {0}"
   activities-logged: "Activities logged: {0}"
   activity-log-title: "Activity Log"
   recent-activities: "Recent activities:"
@@ -118,8 +130,7 @@ bossbar:
   active-title: "Double Life Active"
   default-active-title: "Double Life Default Mode"
   turbo-active-title: "Double Life Turbo Mode"
-  remaining-time: "Double Life - {0} minutes remaining"
-  ending-soon: "Double Life - Session ending soon!"
+  remaining-time: "{0} - {1}"
 
 # Activity Log Messages
 log:
@@ -148,10 +159,14 @@ command:
 
 # Command Help
 help:
+  note: "/doublelife note <text> - Add context to your session log"
+  list: "/doublelife list - Show active sessions"
+  history: "/doublelife history [player] - Browse recorded sessions"
+  forceend: "/doublelife forceend <player> - End someone's session"
   header: "=== Double Life Commands ==="
-  start: "/doublelife start - Start a Default mode session"
-  turbo: "/doublelife turbo - Start a Turbo mode session"
-  end: "/doublelife end - End your current admin session"
+  start: "/doublelife start [reason] - Start a Default mode session"
+  turbo: "/doublelife turbo [reason] - Start a Turbo mode session"
+  end: "/doublelife end [summary] - End your current admin session"
   status: "/doublelife status - View session information"
   gui: "/doublelife - Open the Double Life menu"
   prolong: "/doublelife prolong <minutes> - Extend active session"
@@ -175,3 +190,44 @@ console:
   language-loaded: "Language '{0}' loaded successfully."
   luckperms-hooked: "Successfully hooked into LuckPerms."
   session-cleanup: "Cleaned up {0} active sessions on shutdown."
+
+# Dialogs
+dialog:
+  cancel: "Cancel"
+  start:
+    title: "Start Double Life"
+    prompt: "Why are you starting Double Life? Reviewers see this next to your session."
+    input: "Reason (ticket, player, task)"
+    confirm: "Start"
+  end:
+    title: "End Double Life"
+    prompt: "Briefly, what did you do? (optional)"
+    input: "Summary"
+    confirm: "End session"
+
+# Active sessions list
+list:
+  header: "=== Active Double Life Sessions ==="
+  entry: "{0} - {1} - {2} left - {3}"
+  empty: "No active sessions."
+
+# Session history menu
+history:
+  title: "Double Life History"
+  sessions-title: "Sessions - {0}"
+  timeline-title: "Timeline - {0}"
+  empty: "No sessions recorded yet."
+  not-found: "No recorded sessions for {0}."
+  staff-sessions: "Sessions: {0}"
+  staff-flagged: "Flagged: {0}"
+  staff-last: "Last: {0}"
+  duration: "Duration: {0}"
+  reason: "Reason: {0}"
+  risk: "Risk: {0} (score {1})"
+  activities: "Activities: {0}"
+  click-open: "Click to open"
+  flagged-only: "Show flagged only"
+  show-all: "Show all sessions"
+  previous: "Previous page"
+  next: "Next page"
+  back: "Back"

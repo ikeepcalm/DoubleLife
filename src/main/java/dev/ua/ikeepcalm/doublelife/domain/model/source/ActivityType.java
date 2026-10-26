@@ -15,6 +15,7 @@ public enum ActivityType {
     ITEM_PICKUP("Item Picked Up"),
     TELEPORT("Teleported"),
     CONTAINER_TRANSFER("Container Transfer"),
+    NOTE("Staff Note"),
     SESSION_START("Session Started"),
     SESSION_END("Session Ended");
     

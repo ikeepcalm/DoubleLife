@@ -1,6 +1,7 @@
 package dev.ua.ikeepcalm.doublelife.domain.service;
 
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
+import dev.ua.ikeepcalm.doublelife.config.PluginConfig;
 import dev.ua.ikeepcalm.doublelife.domain.model.ActivityLog;
 import dev.ua.ikeepcalm.doublelife.domain.model.RiskAssessment;
 import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
@@ -10,9 +11,15 @@ import dev.ua.ikeepcalm.doublelife.domain.model.source.RiskLevel;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
+/**
+ * Every flag counts once per session: repeating a legit action (restoring a chest = dozens of transfers)
+ * must not stack into HIGH. Self-targeted sensitive commands are the strongest abuse signal.
+ */
 public class RiskAnalyzer {
 
     private final DoubleLife plugin;
@@ -21,142 +28,114 @@ public class RiskAnalyzer {
         this.plugin = plugin;
     }
 
-    public RiskAssessment analyze(SessionData session) {
+    public RiskAssessment analyze(SessionData session, String playerName) {
+        PluginConfig config = plugin.getPluginConfig();
         List<ActivityLog> activities = session.getActivities();
         List<String> flags = new ArrayList<>();
         int score = 0;
 
-        int weightCreativeContainer = plugin.getPluginConfig().getRiskWeightCreativeContainer();
-        int weightTeleportDrop = plugin.getPluginConfig().getRiskWeightTeleportDrop();
-        int weightItemDropVolume = plugin.getPluginConfig().getRiskWeightItemDropVolume();
-        int weightContainerAccess = plugin.getPluginConfig().getRiskWeightContainerAccess();
-        int weightBlockBreakVelocity = plugin.getPluginConfig().getRiskWeightBlockBreakVelocity();
-        int weightSensitiveCommand = plugin.getPluginConfig().getRiskWeightSensitiveCommand();
-
-        long blockWindowSeconds = plugin.getPluginConfig().getRiskBlockWindowSeconds();
-        int blockVelocityThreshold = plugin.getPluginConfig().getRiskBlockVelocityCount();
-        long teleportDropWindowSeconds = plugin.getPluginConfig().getRiskTeleportDropWindowSeconds();
-        int dropVolumeThreshold = plugin.getPluginConfig().getRiskDropVolumeThreshold();
-        int containerAccessThreshold = plugin.getPluginConfig().getRiskContainerAccessThreshold();
-
-        // Track creative state: TURBO always starts in creative; DEFAULT tracks GAMEMODE_CHANGE events
         boolean inCreative = session.getMode() == DoubleLifeMode.TURBO;
-
-        int totalDrops = 0;
-        int totalContainerAccesses = 0;
-        int totalContainerTransfersInCreative = 0;
-        int totalBlockBreaksInCreative = 0;
+        int drops = 0;
+        int containerAccesses = 0;
+        int creativeTransfers = 0;
+        int creativeBreaks = 0;
+        int teleportDrops = 0;
+        int peakBreaks = 0;
+        Set<String> sensitivePatterns = new LinkedHashSet<>();
+        List<String> selfTargeted = new ArrayList<>();
 
         for (int i = 0; i < activities.size(); i++) {
             ActivityLog activity = activities.get(i);
-
-            // Track creative transitions
-            if (activity.getType() == ActivityType.GAMEMODE_CHANGE) {
-                String details = activity.getDetails().toLowerCase();
-                if (details.contains("creative")) {
-                    inCreative = true;
-                } else if (details.contains("survival") || details.contains("adventure") || details.contains("spectator")) {
-                    inCreative = false;
+            switch (activity.getType()) {
+                case GAMEMODE_CHANGE -> {
+                    String details = activity.getDetails().toLowerCase();
+                    if (details.endsWith("creative")) inCreative = true;
+                    else if (details.endsWith("survival") || details.endsWith("adventure") || details.endsWith("spectator")) inCreative = false;
                 }
-            }
-
-            // Creative + container siphoning
-            if (inCreative) {
-                if (activity.getType() == ActivityType.CONTAINER_TRANSFER) {
-                    totalContainerTransfersInCreative++;
+                case CONTAINER_TRANSFER -> { if (inCreative) creativeTransfers++; }
+                case CONTAINER_ACCESS -> containerAccesses++;
+                case ITEM_DROP -> drops++;
+                case BLOCK_BREAK -> {
+                    if (inCreative) creativeBreaks++;
+                    Instant windowStart = activity.getTimestamp().minusSeconds(config.getRiskBlockWindowSeconds());
+                    int inWindow = 0;
+                    for (int j = i; j >= 0 && !activities.get(j).getTimestamp().isBefore(windowStart); j--) {
+                        if (activities.get(j).getType() == ActivityType.BLOCK_BREAK) inWindow++;
+                    }
+                    peakBreaks = Math.max(peakBreaks, inWindow);
                 }
-                if (activity.getType() == ActivityType.BLOCK_BREAK) {
-                    totalBlockBreaksInCreative++;
-                }
-            }
-
-            // Item drop volume
-            if (activity.getType() == ActivityType.ITEM_DROP) {
-                totalDrops++;
-            }
-
-            // Container access count
-            if (activity.getType() == ActivityType.CONTAINER_ACCESS) {
-                totalContainerAccesses++;
-            }
-
-            // TP-then-drop: teleport (player-caused) followed by item drop within window
-            if (activity.getType() == ActivityType.TELEPORT) {
-                String details = activity.getDetails().toLowerCase();
-                boolean playerTriggered = details.contains("player") || details.contains("tp") || details.contains("teleport");
-                if (playerTriggered) {
+                case TELEPORT -> {
                     Instant teleportTime = activity.getTimestamp();
                     for (int j = i + 1; j < activities.size(); j++) {
                         ActivityLog next = activities.get(j);
-                        long secondsAfter = next.getTimestamp().getEpochSecond() - teleportTime.getEpochSecond();
-                        if (secondsAfter > teleportDropWindowSeconds) break;
+                        if (next.getTimestamp().getEpochSecond() - teleportTime.getEpochSecond() > config.getRiskTeleportDropWindowSeconds()) break;
                         if (next.getType() == ActivityType.ITEM_DROP) {
-                            score += weightTeleportDrop;
-                            flags.add("Teleported then dropped items within " + teleportDropWindowSeconds + "s (possible item handoff)");
+                            teleportDrops++;
                             break;
                         }
                     }
                 }
-            }
-
-            // Block-break velocity: count breaks in a rolling window
-            if (activity.getType() == ActivityType.BLOCK_BREAK) {
-                Instant windowStart = activity.getTimestamp().minusSeconds(blockWindowSeconds);
-                int breaksInWindow = 0;
-                for (ActivityLog other : activities) {
-                    if (other.getType() == ActivityType.BLOCK_BREAK
-                            && !other.getTimestamp().isBefore(windowStart)
-                            && !other.getTimestamp().isAfter(activity.getTimestamp())) {
-                        breaksInWindow++;
+                case COMMAND -> {
+                    String cmd = activity.getDetails();
+                    for (Pattern pattern : config.getSensitiveCommandPatterns()) {
+                        if (pattern.matcher(cmd).find()) {
+                            sensitivePatterns.add(pattern.pattern());
+                            if (isSelfTargeted(cmd, playerName)) selfTargeted.add(cmd);
+                            break;
+                        }
                     }
                 }
-                if (breaksInWindow >= blockVelocityThreshold) {
-                    score += weightBlockBreakVelocity;
-                    flags.add("High block-break velocity: " + breaksInWindow + " breaks in " + blockWindowSeconds + "s");
-                    // Only flag this once by breaking out of the velocity check for this window
-                    break;
-                }
-            }
-
-            // Sensitive command usage — matched against all configured patterns
-            if (activity.getType() == ActivityType.COMMAND) {
-                String cmd = activity.getDetails();
-                for (Pattern pattern : plugin.getPluginConfig().getSensitiveCommandPatterns()) {
-                    if (pattern.matcher(cmd).find()) {
-                        score += weightSensitiveCommand;
-                        flags.add("Sensitive command matched [" + pattern.pattern() + "]: " + cmd);
-                        break; // count each command once even if multiple patterns match
-                    }
+                default -> {
                 }
             }
         }
 
-        // Evaluate accumulated totals
-        if (totalContainerTransfersInCreative > 0) {
-            score += weightCreativeContainer * totalContainerTransfersInCreative;
-            flags.add("Accessed " + totalContainerTransfersInCreative + " container(s) while in Creative mode (possible item siphoning)");
+        if (!selfTargeted.isEmpty()) {
+            score += config.getRiskWeightSelfTargeted();
+            flags.add("Sensitive command(s) targeting themselves: " + String.join(", ", selfTargeted.subList(0, Math.min(5, selfTargeted.size()))));
         }
-        if (totalBlockBreaksInCreative > 0 && totalContainerTransfersInCreative > 0) {
-            // Already flagged transfers; add a combined note
-            score += weightCreativeContainer;
-            flags.add("Broke blocks and transferred items while in Creative — possible stash concealment");
+        if (!sensitivePatterns.isEmpty()) {
+            score += config.getRiskWeightSensitiveCommand() * sensitivePatterns.size();
+            flags.add("Used sensitive command type(s): " + String.join(", ", sensitivePatterns));
         }
-        if (totalDrops >= dropVolumeThreshold) {
-            score += weightItemDropVolume * totalDrops;
-            flags.add("Dropped items " + totalDrops + " time(s) during session (threshold: " + dropVolumeThreshold + ")");
+        if (teleportDrops > 0) {
+            score += config.getRiskWeightTeleportDrop();
+            flags.add("Teleported then dropped items within " + config.getRiskTeleportDropWindowSeconds() + "s, " + teleportDrops + " time(s) (possible item handoff)");
         }
-        if (totalContainerAccesses >= containerAccessThreshold) {
-            score += weightContainerAccess * totalContainerAccesses;
-            flags.add("Accessed " + totalContainerAccesses + " container(s) (threshold: " + containerAccessThreshold + ")");
+        if (creativeTransfers > 0) {
+            score += config.getRiskWeightCreativeContainer();
+            flags.add("Moved items in containers " + creativeTransfers + " time(s) while in Creative");
+            if (creativeBreaks > 0) {
+                score += config.getRiskWeightCreativeContainer();
+                flags.add("Broke blocks and moved items while in Creative (possible stash concealment)");
+            }
+        }
+        if (peakBreaks >= config.getRiskBlockVelocityCount()) {
+            score += config.getRiskWeightBlockBreakVelocity();
+            flags.add("High block-break velocity: " + peakBreaks + " breaks in " + config.getRiskBlockWindowSeconds() + "s");
+        }
+        if (drops >= config.getRiskDropVolumeThreshold()) {
+            score += config.getRiskWeightItemDropVolume();
+            flags.add("Dropped items " + drops + " time(s)");
+        }
+        if (containerAccesses >= config.getRiskContainerAccessThreshold()) {
+            score += config.getRiskWeightContainerAccess();
+            flags.add("Opened " + containerAccesses + " container(s)");
         }
 
-        RiskLevel level = scoreToLevel(score);
+        RiskLevel level = score >= config.getRiskHighScore() ? RiskLevel.HIGH
+                : score >= config.getRiskMediumScore() ? RiskLevel.MEDIUM : RiskLevel.LOW;
         return new RiskAssessment(score, level, flags);
     }
 
-    private RiskLevel scoreToLevel(int score) {
-        if (score >= 15) return RiskLevel.HIGH;
-        if (score >= 6) return RiskLevel.MEDIUM;
-        return RiskLevel.LOW;
+    static boolean isSelfTargeted(String command, String playerName) {
+        String[] tokens = command.toLowerCase().split("\\s+");
+        for (int i = 1; i < tokens.length; i++) {
+            String token = tokens[i];
+            // @a and @e include the sender too
+            if (token.startsWith("@s") || token.startsWith("@p") || token.startsWith("@a") || token.startsWith("@e")
+                    || token.equals(playerName.toLowerCase())) return true;
+        }
+        return false;
     }
 }

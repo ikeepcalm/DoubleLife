@@ -11,7 +11,17 @@ max-duration: 10m
 # Cooldown between sessions
 cooldown: 5m
 
-# Permissions granted during Double Life mode
+# Most minutes a session can be extended by in total (/dl extend)
+max-extension: 10m
+
+# Ask staff why they start a session (dialog). Empty answers are refused when true.
+require-reason: true
+
+# Permissions granted during Default mode (e.g. a land-claim bypass for heralds)
+# Use '-permission' to explicitly deny a permission
+default-permissions: []
+
+# Permissions granted during Turbo mode
 # Use '-permission' to explicitly deny a permission
 temporary-permissions:
   - "*"
@@ -23,8 +33,14 @@ temporary-permissions:
 entry-commands:
   - "gamemode creative {player}"
 
+# Commands executed when leaving Double Life mode (also on quit, kick and timeout)
+# Prefix with "player:" to run the command as the player instead of the console
+exit-commands:
+  - "player:co inspect off"
+
 # Group Command Restrictions (for Default mode)
 # Commands listed here require DoubleLife mode to execute
+# An entry can be a whole command ("co") or a subcommand ("coi turbo")
 # Format: groupname: [list of commands]
 group-commands:
   moderator:
@@ -54,12 +70,13 @@ group-commands:
     - "tpa"
     - "tphere"
 
+# Commands that are never restricted, even if a group-commands entry matches them
+# Example: ["coi church pray"] when "coi" is restricted but praying should work outside DL
+always-allowed-commands: []
+
 # GUI Settings
 gui:
   enabled: true
-  title: "⚡ Double Life Menu"
-  start-button: "Start Admin Mode"
-  end-button: "End Admin Mode"
 
 # Activity Logging Settings
 logging:
@@ -76,7 +93,7 @@ webhook:
     enabled: false
     url: ""
     format: "markdown" # Options: markdown, json
-    turbo-mention: true # Whether to use @here for Turbo mode sessions
+    turbo-mention: true # Whether flagged reports may use @here at all
   callback:
     enabled: false
     url: ""
@@ -92,15 +109,22 @@ ai:
 
 # Risk Scoring
 risk:
-  # Minimum level to trigger @here ping and AI summary: LOW, MEDIUM, HIGH
+  # Each flag counts once per session, however often the action repeats
+  # Minimum level for a flagged report with AI verdict: LOW, MEDIUM, HIGH
   threshold: "MEDIUM"
+  # Minimum level for an @here ping (an AI verdict of ABUSE also pings)
+  ping-threshold: "HIGH"
+  levels:
+    medium: 6
+    high: 15
   weights:
-    creative-container: 5   # per container transfer/access while in creative
+    creative-container: 5   # moved items in containers while in creative
     teleport-then-drop: 8   # teleport followed by item drop
-    item-drop-volume: 1     # per drop above the volume threshold
-    container-access: 1     # per access above the access threshold
+    item-drop-volume: 3     # dropped items at least drop-volume times
+    container-access: 2     # opened at least container-access containers
     block-break-velocity: 3 # high-velocity breaking burst
-    sensitive-command: 4    # each match of a sensitive-command pattern
+    sensitive-command: 2    # per distinct sensitive-command pattern used
+    self-targeted: 8        # a sensitive command aimed at themselves (@s, @p or own name)
   velocity:
     block-window-seconds: 5   # rolling window for velocity check
     block-count: 30           # breaks within that window to trigger
@@ -113,7 +137,7 @@ risk:
   # Use standard Java regex — e.g. "/co (restore|rollback)" for OR patterns.
   sensitive-commands:
     - "/give"
-    - "/tp "
+    - "/effect"
     - "gamemode creative"
     - "gm c"
     - "/co restore"
@@ -123,6 +147,12 @@ risk:
 notifications:
   # Whether to post a quiet (no-ping) Discord summary for clean sessions
   clean-summary: true
+  # Each staff member pings at most once per this window, so back-to-back sessions don't flood
+  ping-cooldown: 30m
+
+# In-game session history (/dl history)
+history:
+  retention-days: 90
 
 # Operator whitelist — only players listed here are allowed to hold operator status.
 # Any other online player found with op will be immediately de-opped with a warning.

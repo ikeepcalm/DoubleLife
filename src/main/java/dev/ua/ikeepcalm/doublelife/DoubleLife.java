@@ -13,6 +13,7 @@ import dev.ua.ikeepcalm.doublelife.domain.model.SessionData;
 import dev.ua.ikeepcalm.doublelife.domain.model.PlayerState;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
+import dev.ua.ikeepcalm.doublelife.domain.service.HistoryService;
 import dev.ua.ikeepcalm.doublelife.domain.service.OpGuardService;
 import dev.ua.ikeepcalm.doublelife.util.GeminiClient;
 import dev.ua.ikeepcalm.doublelife.util.SessionReporter;
@@ -35,6 +36,7 @@ public class DoubleLife extends JavaPlugin {
     private GeminiClient geminiClient;
     private SessionReporter sessionReporter;
     private OpGuardService opGuardService;
+    private HistoryService historyService;
     private LiteCommands<CommandSender> liteCommands;
 
     @Override
@@ -60,6 +62,8 @@ public class DoubleLife extends JavaPlugin {
         this.geminiClient = new GeminiClient(this);
         this.sessionReporter = new SessionReporter(this);
         this.opGuardService = new OpGuardService(this);
+        this.historyService = new HistoryService(this);
+        getServer().getScheduler().runTaskAsynchronously(this, () -> historyService.loadIndex(pluginConfig.getHistoryRetentionDays()));
 
         registerCommands();
         registerListeners();
@@ -75,7 +79,6 @@ public class DoubleLife extends JavaPlugin {
     public void onDisable() {
         if (sessionManager != null) {
             try {
-                sessionManager.saveSessionsOnShutdown();
                 sessionManager.endAllSessions();
             } catch (Exception e) {
                 getLogger().severe("Error during session cleanup: " + e.getMessage());

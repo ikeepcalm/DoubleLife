@@ -1,6 +1,7 @@
 package dev.ua.ikeepcalm.doublelife.config;
 
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
+import dev.ua.ikeepcalm.doublelife.domain.model.source.RiskLevel;
 import lombok.Getter;
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -23,15 +24,17 @@ public class PluginConfig {
     private final long maxDuration;
     private final long cooldownDuration;
     private final List<String> temporaryPermissions;
+    private final long maxExtension;
+    private final boolean requireReason;
+    private final List<String> defaultPermissions;
     private final List<String> entryCommands;
+    private final List<String> exitCommands;
     private final Map<String, List<String>> groupCommands;
+    private final List<String> alwaysAllowedCommands;
     
     private final String language;
     
     private final boolean guiEnabled;
-    private final String guiTitle;
-    private final String guiStartButton;
-    private final String guiEndButton;
     
     private final boolean logCommands;
     private final boolean logGamemodeChanges;
@@ -55,13 +58,19 @@ public class PluginConfig {
     private final String aiModel;
 
     // Risk scoring
-    private final String riskThreshold;
+    private final RiskLevel riskThreshold;
     private final int riskWeightCreativeContainer;
     private final int riskWeightTeleportDrop;
     private final int riskWeightItemDropVolume;
     private final int riskWeightContainerAccess;
     private final int riskWeightBlockBreakVelocity;
     private final int riskWeightSensitiveCommand;
+    private final int riskWeightSelfTargeted;
+    private final int riskMediumScore;
+    private final int riskHighScore;
+    private final RiskLevel riskPingThreshold;
+    private final int historyRetentionDays;
+    private final long pingCooldownMinutes;
     private final long riskBlockWindowSeconds;
     private final int riskBlockVelocityCount;
     private final long riskTeleportDropWindowSeconds;
@@ -85,15 +94,17 @@ public class PluginConfig {
         this.maxDuration = parseDuration(config.getString("max-duration", "10m"));
         this.cooldownDuration = parseDuration(config.getString("cooldown", "5m"));
         this.temporaryPermissions = config.getStringList("temporary-permissions");
+        this.maxExtension = parseDuration(config.getString("max-extension", "10m"));
+        this.requireReason = config.getBoolean("require-reason", true);
+        this.defaultPermissions = config.getStringList("default-permissions");
         this.entryCommands = config.getStringList("entry-commands");
+        this.exitCommands = config.getStringList("exit-commands");
         this.groupCommands = loadGroupCommands();
+        this.alwaysAllowedCommands = config.getStringList("always-allowed-commands").stream().map(String::toLowerCase).toList();
 
         this.language = config.getString("language.default", "en");
 
         this.guiEnabled = config.getBoolean("gui.enabled", true);
-        this.guiTitle = config.getString("gui.title", "⚡ Double Life Menu");
-        this.guiStartButton = config.getString("gui.start-button", "Start Admin Mode");
-        this.guiEndButton = config.getString("gui.end-button", "End Admin Mode");
 
         this.logCommands = config.getBoolean("logging.commands", true);
         this.logGamemodeChanges = config.getBoolean("logging.gamemode-changes", true);
@@ -117,13 +128,19 @@ public class PluginConfig {
         this.aiModel = config.getString("ai.model", "gemini-2.0-flash");
 
         // Risk weights
-        this.riskThreshold = config.getString("risk.threshold", "MEDIUM");
+        this.riskThreshold = RiskLevel.fromString(config.getString("risk.threshold", "MEDIUM"));
         this.riskWeightCreativeContainer = config.getInt("risk.weights.creative-container", 5);
         this.riskWeightTeleportDrop = config.getInt("risk.weights.teleport-then-drop", 8);
-        this.riskWeightItemDropVolume = config.getInt("risk.weights.item-drop-volume", 1);
-        this.riskWeightContainerAccess = config.getInt("risk.weights.container-access", 1);
+        this.riskWeightItemDropVolume = config.getInt("risk.weights.item-drop-volume", 3);
+        this.riskWeightContainerAccess = config.getInt("risk.weights.container-access", 2);
         this.riskWeightBlockBreakVelocity = config.getInt("risk.weights.block-break-velocity", 3);
-        this.riskWeightSensitiveCommand = config.getInt("risk.weights.sensitive-command", 4);
+        this.riskWeightSensitiveCommand = config.getInt("risk.weights.sensitive-command", 2);
+        this.riskWeightSelfTargeted = config.getInt("risk.weights.self-targeted", 8);
+        this.riskMediumScore = config.getInt("risk.levels.medium", 6);
+        this.riskHighScore = config.getInt("risk.levels.high", 15);
+        this.riskPingThreshold = RiskLevel.fromString(config.getString("risk.ping-threshold", "HIGH"));
+        this.historyRetentionDays = config.getInt("history.retention-days", 90);
+        this.pingCooldownMinutes = parseDuration(config.getString("notifications.ping-cooldown", "30m"));
         this.riskBlockWindowSeconds = config.getLong("risk.velocity.block-window-seconds", 5L);
         this.riskBlockVelocityCount = config.getInt("risk.velocity.block-count", 30);
         this.riskTeleportDropWindowSeconds = config.getLong("risk.teleport-drop-window-seconds", 15L);
@@ -181,8 +198,7 @@ public class PluginConfig {
         }
         
         for (String groupName : section.getKeys(false)) {
-            List<String> commands = section.getStringList(groupName);
-            result.put(groupName, commands);
+            result.put(groupName, section.getStringList(groupName).stream().map(String::toLowerCase).toList());
         }
         
         return result;

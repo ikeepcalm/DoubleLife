@@ -9,6 +9,16 @@ messages:
 
 # Повідомлення про сесію
 session:
+  backup-failed: "Не вдалося зберегти інвентар, тому сесію не розпочато. Повідомте розробника."
+  reason-hint: "Порада: наступного разу вкажіть причину, напр. /dl start тікет #123"
+  reason-required: "Вкажіть, навіщо ви запускаєте Double Life (номер тікета, нік гравця, завдання)."
+  ending-soon: "Ваша сесія Double Life завершиться за 1 хвилину. Використайте /dl extend <хвилини>, якщо потрібно більше часу."
+  recovered: "Вашу минулу сесію Double Life було перервано. Інвентар і позицію відновлено."
+  note-added: "Нотатку додано до журналу сесії."
+  extend-invalid: "Кількість хвилин має бути додатною."
+  extend-limit: "Неможливо продовжити: загалом сесію можна продовжити щонайбільше на {0} хвилин."
+  force-ended: "Сесію Double Life гравця {0} завершено."
+  force-ended-target: "Вашу сесію Double Life завершив {0}."
   start-success: "Сесію Double Life розпочано! Ви отримали тимчасові адмін-права."
   default-start-success: "Стандартну сесію Double Life розпочано! Моніторинг команд активовано."
   turbo-start-success: "Турбо-сесію Double Life розпочано! Повні адмін-права надано."
@@ -21,10 +31,6 @@ session:
   on-cooldown: "Вам потрібно зачекати {0} секунд перед запуском нової сесії."
   cannot-start: "Наразі ви не можете розпочати сесію Double Life."
   turbo-permission-required: "У вас немає дозволу на використання турбо-режиму. Зверніться до адміністратора для отримання права 'doublelife.turbo'."
-  restored-after-restart: "Вашу сесію Double Life відновлено після перезапуску сервера."
-  default-restored: "Стандартну сесію Double Life відновлено після перезапуску сервера."
-  turbo-restored: "Турбо-сесію Double Life відновлено після перезапуску сервера."
-  expired-during-restart: "Ваша сесія Double Life закінчилась, поки сервер був вимкнений."
   extended-success: "Сесію успішно продовжено на {0} хвилин!"
 
 # Повідомлення про права доступу
@@ -45,14 +51,20 @@ status:
 
 # Повідомлення GUI
 gui:
+  click-to-start: "Натисніть, щоб почати (буде запитано причину)"
+  extend-button: "Продовжити на {0} хвилин"
+  extend-button-lore:
+    - "Додати час до цієї сесії"
+    - "Залишок продовження: {0} хвилин"
+  reason: "Причина: {0}"
+  note-hint: "Додайте контекст через /dl note <текст>"
+  sessions-title: "Активні сесії ({0})"
+  history-button: "Історія сесій"
+  history-button-lore:
+    - "Переглянути записані сесії:"
+    - "причини, ризик, вердикти ШІ"
+    - "і повну хронологію"
   title: "⚡ Меню Double Life"
-  start-button: "Розпочати адмін-режим"
-  start-button-lore:
-    - "Натисніть, щоб почати тимчасову"
-    - "адмін-сесію з повними правами"
-    - ""
-    - "Тривалість: {0} хвилин"
-    - "Затримка: {1} хвилин"
   
   default-button: "Стандартний режим"
   default-button-lore:
@@ -106,8 +118,8 @@ gui:
   info-title: "Інформація"
   cooldown-title: "Кулдаун"
   cooldown-wait: "Будь ласка, зачекайте: {0}"
-  time-elapsed: "Минуло часу: {0} хвилин"
-  time-remaining: "Залишилось часу: {0} хвилин"
+  time-elapsed: "Минуло часу: {0}"
+  time-remaining: "Залишилось часу: {0}"
   activities-logged: "Записано дій: {0}"
   activity-log-title: "Журнал дій"
   recent-activities: "Останні дії:"
@@ -118,8 +130,7 @@ bossbar:
   active-title: "Double Life активний"
   default-active-title: "Double Life стандартний режим"
   turbo-active-title: "Double Life турбо-режим"
-  remaining-time: "Double Life - залишилось {0} хвилин"
-  ending-soon: "Double Life - Сесія скоро завершиться!"
+  remaining-time: "{0} - {1}"
 
 # Повідомлення журналу активності
 log:
@@ -148,10 +159,14 @@ command:
 
 # Допомога з командами
 help:
+  note: "/doublelife note <текст> - Додати контекст до журналу сесії"
+  list: "/doublelife list - Показати активні сесії"
+  history: "/doublelife history [гравець] - Переглянути записані сесії"
+  forceend: "/doublelife forceend <гравець> - Завершити чужу сесію"
   header: "=== Команди Double Life ==="
-  start: "/doublelife start - Розпочати стандартну сесію"
-  turbo: "/doublelife turbo - Розпочати турбо-сесію"
-  end: "/doublelife end - Завершити поточну адмін-сесію"
+  start: "/doublelife start [причина] - Розпочати стандартну сесію"
+  turbo: "/doublelife turbo [причина] - Розпочати турбо-сесію"
+  end: "/doublelife end [підсумок] - Завершити поточну адмін-сесію"
   status: "/doublelife status - Переглянути інформацію про сесію"
   gui: "/doublelife - Відкрити меню Double Life"
   prolong: "/doublelife prolong <хвилини> - Продовжити активну сесію"
@@ -175,3 +190,44 @@ console:
   language-loaded: "Мова '{0}' успішно завантажена."
   luckperms-hooked: "Успішно підключено до LuckPerms."
   session-cleanup: "Очищено {0} активних сесій під час вимкнення."
+
+# Діалоги
+dialog:
+  cancel: "Скасувати"
+  start:
+    title: "Почати Double Life"
+    prompt: "Навіщо ви запускаєте Double Life? Рецензенти бачитимуть це поруч із сесією."
+    input: "Причина (тікет, гравець, завдання)"
+    confirm: "Почати"
+  end:
+    title: "Завершити Double Life"
+    prompt: "Коротко: що ви зробили? (необов'язково)"
+    input: "Підсумок"
+    confirm: "Завершити сесію"
+
+# Список активних сесій
+list:
+  header: "=== Активні сесії Double Life ==="
+  entry: "{0} - {1} - залишилось {2} - {3}"
+  empty: "Немає активних сесій."
+
+# Меню історії сесій
+history:
+  title: "Історія Double Life"
+  sessions-title: "Сесії - {0}"
+  timeline-title: "Хронологія - {0}"
+  empty: "Ще немає записаних сесій."
+  not-found: "Немає записаних сесій для {0}."
+  staff-sessions: "Сесій: {0}"
+  staff-flagged: "Позначених: {0}"
+  staff-last: "Остання: {0}"
+  duration: "Тривалість: {0}"
+  reason: "Причина: {0}"
+  risk: "Ризик: {0} (бали {1})"
+  activities: "Дій: {0}"
+  click-open: "Натисніть, щоб відкрити"
+  flagged-only: "Лише позначені"
+  show-all: "Усі сесії"
+  previous: "Попередня сторінка"
+  next: "Наступна сторінка"
+  back: "Назад"

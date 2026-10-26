@@ -3,6 +3,7 @@ package dev.ua.ikeepcalm.doublelife.config;
 import dev.ua.ikeepcalm.doublelife.DoubleLife;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.io.File;
@@ -104,6 +105,10 @@ public class LangConfig {
         return getMessage(key, getPlayerLanguage(player));
     }
     
+    public String getMessage(String key, CommandSender sender, Object... placeholders) {
+        return getMessage(key, getPlayerLanguage(sender instanceof Player player ? player : null), placeholders);
+    }
+
     public String getMessage(String key, Player player, Object... placeholders) {
         return getMessage(key, getPlayerLanguage(player), placeholders);
     }

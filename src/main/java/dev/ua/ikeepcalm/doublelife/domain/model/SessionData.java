@@ -3,6 +3,7 @@ package dev.ua.ikeepcalm.doublelife.domain.model;
 import dev.ua.ikeepcalm.doublelife.domain.model.source.ActivityType;
 import dev.ua.ikeepcalm.doublelife.domain.model.source.DoubleLifeMode;
 import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 
 import java.time.Duration;
@@ -16,10 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Represents a DoubleLife admin session with state management and persistence support.
- * This class handles both runtime session logic and serialization for server restarts.
- */
 @Getter
 public class SessionData implements ConfigurationSerializable {
 
@@ -30,20 +27,14 @@ public class SessionData implements ConfigurationSerializable {
     private final List<ActivityLog> activities;
     private final DoubleLifeMode mode;
     private long extensionMinutes = 0;
+    @Setter
+    private String reason;
 
     public SessionData(UUID playerId, PlayerState savedState, DoubleLifeMode mode) {
         this.playerId = playerId;
         this.savedState = savedState;
         this.mode = mode;
         this.startTime = Instant.now();
-        this.activities = new ArrayList<>();
-    }
-
-    public SessionData(UUID playerId, PlayerState savedState, DoubleLifeMode mode, LocalDateTime startTime) {
-        this.playerId = playerId;
-        this.savedState = savedState;
-        this.mode = mode;
-        this.startTime = startTime.atZone(ZoneId.systemDefault()).toInstant();
         this.activities = new ArrayList<>();
     }
 
@@ -81,9 +72,8 @@ public class SessionData implements ConfigurationSerializable {
         return LocalDateTime.ofInstant(startTime, ZoneId.systemDefault());
     }
 
-    public void extendSession(long extensionMillis) {
-        // Simply add to the extension counter - don't manipulate startTime
-        this.extensionMinutes += extensionMillis / (60 * 1000);
+    public void extendSession(long minutes) {
+        this.extensionMinutes += minutes;
     }
 
     public long getTotalAllowedMinutes(long baseDurationMinutes) {
@@ -104,6 +94,9 @@ public class SessionData implements ConfigurationSerializable {
         }
         map.put("mode", mode.name());
         map.put("extensionMinutes", extensionMinutes);
+        if (reason != null) {
+            map.put("reason", reason);
+        }
 
         if (savedState != null) {
             map.put("savedState", savedState);
@@ -139,6 +132,7 @@ public class SessionData implements ConfigurationSerializable {
             }
 
             SessionData session = new SessionData(playerId, savedState, mode, startTime, extensionMinutes);
+            session.reason = (String) map.get("reason");
 
             // Restore endTime if present (though typically only active sessions are saved)
             String endTimeStr = (String) map.get("endTime");

@@ -177,29 +177,8 @@ public class ComponentUtil {
         return MINI_MESSAGE.deserialize(bar.toString());
     }
 
-    /**
-     * Creates a time duration component with styling
-     */
-    public static Component duration(long seconds) {
-        if (seconds >= 3600) {
-            long hours = seconds / 3600;
-            long minutes = (seconds % 3600) / 60;
-            long secs = seconds % 60;
-            return Component.text()
-                    .append(Component.text(hours + "h ", PRIMARY_COLOR))
-                    .append(Component.text(minutes + "m ", SECONDARY_COLOR))
-                    .append(Component.text(secs + "s", ACCENT_COLOR))
-                    .build();
-        } else if (seconds >= 60) {
-            long minutes = seconds / 60;
-            long secs = seconds % 60;
-            return Component.text()
-                    .append(Component.text(minutes + "m ", PRIMARY_COLOR))
-                    .append(Component.text(secs + "s", SECONDARY_COLOR))
-                    .build();
-        } else {
-            return Component.text(seconds + "s", PRIMARY_COLOR);
-        }
+    public static String clock(long seconds) {
+        return String.format("%d:%02d", seconds / 60, seconds % 60);
     }
 
     /**

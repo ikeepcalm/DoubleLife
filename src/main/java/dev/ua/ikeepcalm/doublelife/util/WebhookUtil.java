@@ -13,6 +13,8 @@ import java.nio.charset.StandardCharsets;
 
 public class WebhookUtil {
 
+    public static final String NO_REASON = "(none given)";
+
     private final DoubleLife plugin;
 
     public WebhookUtil(DoubleLife plugin) {
@@ -29,9 +31,9 @@ public class WebhookUtil {
         }
     }
 
-    public void sendTurboModeActivation(String playerName) {
+    public void sendTurboModeActivation(String playerName, String reason) {
         if (plugin.getPluginConfig().isDiscordWebhookEnabled()) {
-            sendTurboActivationWebhook(playerName);
+            sendTurboActivationWebhook(playerName, reason != null ? reason : NO_REASON);
         }
     }
 
@@ -186,91 +188,89 @@ public class WebhookUtil {
     }
 
     /**
-     * Posts a high-priority flagged-session alert.  Called from an already-async task.
+     * Posts a flagged-session alert. Blocking: call from the reporter thread.
      */
-    public void sendFlaggedAlert(String playerName, SessionData session, RiskAssessment assessment, String aiVerdict) {
+    public void sendFlaggedAlert(String playerName, SessionData session, RiskAssessment assessment, String aiVerdict, boolean ping) {
         if (!plugin.getPluginConfig().isDiscordWebhookEnabled()) return;
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try {
-                String webhookUrl = plugin.getPluginConfig().getDiscordWebhookUrl();
-                if (webhookUrl.isEmpty()) return;
+        try {
+            String webhookUrl = plugin.getPluginConfig().getDiscordWebhookUrl();
+            if (webhookUrl.isEmpty()) return;
 
-                LogWriter logWriter = new LogWriter(plugin, session);
-                String detailBlock = escapeJson(logWriter.formatLogForDiscord(1400));
+            LogWriter logWriter = new LogWriter(plugin, session);
+            String detailBlock = escapeJson(logWriter.formatLogForDiscord(1400));
 
-                String mention = plugin.getPluginConfig().isDiscordTurboMention() ? "@here " : "";
-                String levelEmoji = assessment.getLevel().getEmoji();
-                int color = assessment.getLevel().getDiscordColor();
+            String mention = ping && plugin.getPluginConfig().isDiscordTurboMention() ? "@here " : "";
+            String levelEmoji = assessment.getLevel().getEmoji();
+            int color = assessment.getLevel().getDiscordColor();
 
-                String flagsSection = escapeJson(assessment.formatFlags());
-                String verdictLine = escapeJson(aiVerdict);
+            String flagsSection = escapeJson(assessment.formatFlags());
+            String verdictLine = escapeJson(aiVerdict);
 
-                String description = "**AI Verdict:** " + verdictLine + "\\n\\n"
-                        + "**Risk Score:** " + assessment.getScore()
-                        + " (" + assessment.getLevel().getDisplayName() + ")\\n\\n"
-                        + "**Flags:**\\n" + flagsSection + "\\n\\n"
-                        + detailBlock;
+            String description = "**Reason:** " + escapeJson(reasonOf(session)) + "\\n"
+                    + "**AI Verdict:** " + verdictLine + "\\n\\n"
+                    + "**Risk Score:** " + assessment.getScore()
+                    + " (" + assessment.getLevel().getDisplayName() + ")\\n\\n"
+                    + "**Flags:**\\n" + flagsSection + "\\n\\n"
+                    + detailBlock;
 
-                String payload = "{"
-                        + "\"content\": \"" + mention + levelEmoji + " **Suspicious session detected**\","
-                        + "\"embeds\": [{"
-                        + "\"title\": \"" + levelEmoji + " " + escapeJson(session.getMode().getDisplayName())
-                        + " Session — " + escapeJson(playerName) + "\","
-                        + "\"description\": \"" + description + "\","
-                        + "\"color\": " + color + ","
-                        + "\"timestamp\": \"" + session.getEndTime().toString() + "\","
-                        + "\"footer\": {\"text\": \"Activities: " + session.getActivities().size()
-                        + " | Duration: " + formatSessionDuration(session) + "\"}"
-                        + "}]"
-                        + "}";
+            String payload = "{"
+                    + "\"content\": \"" + mention + levelEmoji + " **Suspicious session detected**\","
+                    + "\"embeds\": [{"
+                    + "\"title\": \"" + levelEmoji + " " + escapeJson(session.getMode().getDisplayName())
+                    + " Session — " + escapeJson(playerName) + "\","
+                    + "\"description\": \"" + description + "\","
+                    + "\"color\": " + color + ","
+                    + "\"timestamp\": \"" + session.getEndTime().toString() + "\","
+                    + "\"footer\": {\"text\": \"Activities: " + session.getActivities().size()
+                    + " | Duration: " + formatSessionDuration(session) + "\"}"
+                    + "}]"
+                    + "}";
 
-                postWebhook(webhookUrl, payload, "flagged alert");
-                sendCallbackIfEnabled(playerName, logWriter.formatLog(session));
-            } catch (Exception e) {
-                plugin.getLogger().severe("Error sending flagged alert: " + e.getMessage());
-            }
-        });
+            postWebhook(webhookUrl, payload, "flagged alert");
+            sendCallbackIfEnabled(playerName, logWriter.formatLog(session));
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error sending flagged alert: " + e.getMessage());
+        }
     }
 
     /**
      * Posts a quiet one-line summary for a clean (below-threshold) session.
-     * Called from an already-async task.  No mention, green colour.
+     * Blocking: call from the reporter thread. No mention, green colour.
      */
     public void sendCleanSummary(String playerName, SessionData session, RiskAssessment assessment) {
         if (!plugin.getPluginConfig().isDiscordWebhookEnabled()) return;
         if (!plugin.getPluginConfig().isCleanSummaryEnabled()) return;
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try {
-                String webhookUrl = plugin.getPluginConfig().getDiscordWebhookUrl();
-                if (webhookUrl.isEmpty()) return;
+        try {
+            String webhookUrl = plugin.getPluginConfig().getDiscordWebhookUrl();
+            if (webhookUrl.isEmpty()) return;
 
-                String modeEmoji = session.getMode() == DoubleLifeMode.TURBO ? "🚀" : "⚡";
-                String description = "Session ended with no suspicious activity detected. "
-                        + "Score: " + assessment.getScore()
-                        + " | Activities: " + session.getActivities().size()
-                        + " | Duration: " + formatSessionDuration(session);
+            String modeEmoji = session.getMode() == DoubleLifeMode.TURBO ? "🚀" : "⚡";
+            String description = "Reason: " + reasonOf(session) + "\n"
+                    + "Session ended with no suspicious activity detected. "
+                    + "Score: " + assessment.getScore()
+                    + " | Activities: " + session.getActivities().size()
+                    + " | Duration: " + formatSessionDuration(session);
 
-                String payload = "{"
-                        + "\"embeds\": [{"
-                        + "\"title\": \"" + modeEmoji + " " + escapeJson(session.getMode().getDisplayName())
-                        + " Session — " + escapeJson(playerName) + "\","
-                        + "\"description\": \"" + escapeJson(description) + "\","
-                        + "\"color\": 4568217,"  // muted green #45B7D9
-                        + "\"timestamp\": \"" + session.getEndTime().toString() + "\","
-                        + "\"footer\": {\"text\": \"Risk: LOW\"}"
-                        + "}]"
-                        + "}";
+            String payload = "{"
+                    + "\"embeds\": [{"
+                    + "\"title\": \"" + modeEmoji + " " + escapeJson(session.getMode().getDisplayName())
+                    + " Session — " + escapeJson(playerName) + "\","
+                    + "\"description\": \"" + escapeJson(description) + "\","
+                    + "\"color\": 4568217,"  // muted green #45B7D9
+                    + "\"timestamp\": \"" + session.getEndTime().toString() + "\","
+                    + "\"footer\": {\"text\": \"Risk: LOW\"}"
+                    + "}]"
+                    + "}";
 
-                postWebhook(webhookUrl, payload, "clean summary");
+            postWebhook(webhookUrl, payload, "clean summary");
 
-                LogWriter logWriter = new LogWriter(plugin, session);
-                sendCallbackIfEnabled(playerName, logWriter.formatLog(session));
-            } catch (Exception e) {
-                plugin.getLogger().severe("Error sending clean summary: " + e.getMessage());
-            }
-        });
+            LogWriter logWriter = new LogWriter(plugin, session);
+            sendCallbackIfEnabled(playerName, logWriter.formatLog(session));
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error sending clean summary: " + e.getMessage());
+        }
     }
 
     private void postWebhook(String webhookUrl, String payload, String label) {
@@ -300,19 +300,22 @@ public class WebhookUtil {
         }
     }
 
-    private void sendTurboActivationWebhook(String playerName) {
+    private static String reasonOf(SessionData session) {
+        return session.getReason() != null ? session.getReason() : NO_REASON;
+    }
+
+    private void sendTurboActivationWebhook(String playerName, String reason) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 String webhookUrl = plugin.getPluginConfig().getDiscordWebhookUrl();
                 if (webhookUrl.isEmpty()) return;
 
                 // Create immediate high-priority notification for turbo mode activation
-                String attentionLevel = plugin.getPluginConfig().isDiscordTurboMention() ? "@here " : "";
                 String content = "{"
-                        + "\"content\": \"" + attentionLevel + "🚀 **TURBO MODE ACTIVATED** 🚀\","
+                        + "\"content\": \"🚀 **TURBO MODE ACTIVATED** 🚀\","
                         + "\"embeds\": [{"
                         + "\"title\": \"⚠️ High Priority Alert\","
-                        + "\"description\": \"**" + escapeJson(playerName) + "** has activated Turbo Double Life mode with full administrative permissions.\\n\\n🔒 **Enhanced monitoring is now active**\","
+                        + "\"description\": \"**" + escapeJson(playerName) + "** has activated Turbo Double Life mode with full administrative permissions.\\n\\n**Reason:** " + escapeJson(reason) + "\","
                         + "\"color\": 16711680," // Red color for high priority
                         + "\"timestamp\": \"" + java.time.Instant.now().toString() + "\","
                         + "\"footer\": {"
